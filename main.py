@@ -1,4 +1,4 @@
-from telethon import TelegramClient, events, Button
+from telethon import TelegramClient, events, Button, custom
 import asyncio
 import os
 from datetime import datetime
@@ -14,7 +14,7 @@ bot_client = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 running_tasks = {}
 
 # ========================
-# /start — Tampilkan tombol utama
+# /start — Tampilkan menu awal + tombol keyboard
 # ========================
 @bot_client.on(events.NewMessage(pattern="/start"))
 async def start_handler(event):
@@ -23,7 +23,7 @@ async def start_handler(event):
     name = sender.first_name
     username = sender.username
 
-    add_user(user_id, name, username) 
+    add_user(user_id, name, username)
 
     users = load_users()
     user_data = users.get(str(user_id), {})
@@ -34,49 +34,64 @@ async def start_handler(event):
     else:
         tanggal = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 
-    welcome_msg = f"""
-Halo {name}! 👋
-Tanggal Terdaftar: {tanggal}
+    menu = f"""
+===============================
+Daftar Script
+===============================
+Halo {name}! 
+Tanggal: {tanggal}
 
-Klik tombol "▶️ Start Script" untuk mulai.
+Script tersedia:
+1. /attack        - Auto Attack
+2. /search        - Search Musuh
+3. /ssf           - Script Auto Claim SSF
+
+/cek_session      - Cek nama session
+/q                - Stop semua script
+
+Terdaftar: {tanggal}
 """
-    buttons = [
-        [Button.inline("▶️ Start Script", b"show_commands")],
-        [Button.inline("❌ Stop Semua Script", b"quit_all")]
-    ]
-    await event.respond(welcome_msg, buttons=buttons)
 
+    buttons = custom.ReplyKeyboardMarkup(
+        [
+            ["▶️ Start Script", "❌ Stop Semua Script"]
+        ],
+        resize=True
+    )
+
+    await event.respond(menu, buttons=buttons)
 
 # ========================
-# Callback — Tampilkan Command Script
+# Keyboard: Start Script
 # ========================
-@bot_client.on(events.CallbackQuery(data=b"show_commands"))
+@bot_client.on(events.NewMessage(pattern="▶️ Start Script"))
 async def show_commands_handler(event):
-    await event.edit("Pilih salah satu script berikut:", buttons=[
-        [Button.inline("⚔️ Attack", b"attack")],
-        [Button.inline("🔍 Search", b"search")],
-        [Button.inline("📦 SSF", b"ssf")],
-        [Button.inline("📁 Cek Session", b"cek_session")],
-        [Button.inline("❌ Stop Semua Script", b"quit_all")],
-    ])
-
+    buttons = custom.ReplyKeyboardMarkup(
+        [
+            ["⚔️ Attack", "🔍 Search"],
+            ["📦 SSF", "📁 Cek Session"],
+            ["❌ Stop Semua Script", "/start"]
+        ],
+        resize=True
+    )
+    await event.respond("Pilih salah satu script berikut:", buttons=buttons)
 
 # ========================
-# Callback tombol SSF, Attack, Search
+# Handler untuk semua tombol
 # ========================
-@bot_client.on(events.CallbackQuery(data=b"attack"))
+@bot_client.on(events.NewMessage(pattern="⚔️ Attack"))
 async def handle_attack(event):
     await run_attack(event)
 
-@bot_client.on(events.CallbackQuery(data=b"search"))
+@bot_client.on(events.NewMessage(pattern="🔍 Search"))
 async def handle_search(event):
     await run_search(event)
 
-@bot_client.on(events.CallbackQuery(data=b"ssf"))
+@bot_client.on(events.NewMessage(pattern="📦 SSF"))
 async def handle_ssf(event):
     await run_ssf(event)
 
-@bot_client.on(events.CallbackQuery(data=b"cek_session"))
+@bot_client.on(events.NewMessage(pattern="📁 Cek Session"))
 async def handle_cek_session(event):
     user_id = event.sender_id
     session_name = get_user_session(user_id)
@@ -85,12 +100,13 @@ async def handle_cek_session(event):
         return
     await event.respond(f"📦 Session kamu: `{session_name}.session`")
 
-@bot_client.on(events.CallbackQuery(data=b"quit_all"))
+@bot_client.on(events.NewMessage(pattern="❌ Stop Semua Script"))
+@bot_client.on(events.NewMessage(pattern="/q"))
 async def handle_quit_all(event):
     await quit_all(event)
 
 # ========================
-# Fungsi Script
+# Fungsi Jalankan Script
 # ========================
 async def run_attack(event):
     user_id = event.sender_id
@@ -109,7 +125,6 @@ async def run_attack(event):
     task = asyncio.create_task(gp.run_attack(user_id, user_client))
     running_tasks.setdefault(user_id, {})['attack'] = task
 
-
 async def run_search(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
@@ -123,16 +138,15 @@ async def run_search(event):
         await event.respond("⚠️ Script Search sudah berjalan.")
         return
 
-    await event.respond("🔍 Menjalankan Script Search...")    
-    await event.respond(f"""Petunjuk Penggunaan: \n
-          1. Pastikan sudah di adventure paling jauh.\n
-          2. Kirim /adv ke bot untuk memulai script ini.\n
-          3. Setelah Musuh ketemu silahkan lakukan apapun.\n
-          4. Setelah selesai, kirim /adv lagi untuk melanjutkan.\n
-          5. Gunakan perintah /q untuk menghentikan script ini.""")
+    await event.respond("🔍 Menjalankan Script Search...")
+    await event.respond("""Petunjuk Penggunaan: \n
+1. Pastikan sudah di adventure paling jauh.\n
+2. Kirim /adv ke bot untuk memulai script ini.\n
+3. Setelah Musuh ketemu silahkan lakukan apapun.\n
+4. Setelah selesai, kirim /adv lagi untuk melanjutkan.\n
+5. Gunakan perintah /q untuk menghentikan script ini.""")
     task = asyncio.create_task(auto_search.run_search(user_id, user_client))
     running_tasks.setdefault(user_id, {})['search'] = task
-
 
 async def run_ssf(event):
     user_id = event.sender_id
@@ -148,14 +162,13 @@ async def run_ssf(event):
         return
 
     await event.respond("📦 Menjalankan Script SSF...")
-    await event.respond(f"""Petunjuk Penggunaan: \n
-          1. Pastikan sudah perjalanan atau sampai Zou.\n
-          2. Gunakan perintah /ssf untuk memulai script ini.\n
-          3. Script akan otomatis mengklaim SSF setiap 2 detik.\n
-          4. Gunakan perintah /q untuk menghentikan script ini.""")
+    await event.respond("""Petunjuk Penggunaan: \n
+1. Pastikan sudah perjalanan atau sampai Zou.\n
+2. Gunakan perintah /ssf untuk memulai script ini.\n
+3. Script akan otomatis mengklaim SSF setiap 2 detik.\n
+4. Gunakan perintah /q untuk menghentikan script ini.""")
     task = asyncio.create_task(ssf_auto.run_ssf(user_id, user_client))
     running_tasks.setdefault(user_id, {})['ssf'] = task
-
 
 async def quit_all(event):
     user_id = event.sender_id
@@ -176,9 +189,8 @@ async def quit_all(event):
     running_tasks[user_id] = {}
     await event.respond(f"❌ {stop_count} Script kamu dihentikan.")
 
-
 # ========================
-# Jalankan bot
+# Jalankan Bot
 # ========================
 print("🤖 Bot Helper aktif. Kirim /start ke bot kamu.")
 bot_client.run_until_disconnected()
