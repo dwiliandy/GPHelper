@@ -1,8 +1,12 @@
 import json
+import os
 from pathlib import Path
 from telethon import TelegramClient, events
 from datetime import datetime
-from load_env import API_ID, API_HASH, BOT_TOKEN
+
+API_ID = int(os.getenv("API_ID"))
+API_HASH = os.getenv("API_HASH")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 SESSION_MAP_FILE = Path("sessions/sessions_map.json")
 USERS_FILE = Path("user_sessions.json")  # ganti nama file jadi users.json
