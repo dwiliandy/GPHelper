@@ -97,7 +97,13 @@ def init(client,user_id):
 
 async def run_search(user_id, client):
     running_flags[user_id] = True
-    print("Memulai Script Search...")
+    print("🔍 Memulai Script Search...")
+    print(f"""Petunjuk Penggunaan: \n
+          1. Pastikan sudah di adventure paling jauh.\n
+          2. Kirim /adv ke bot untuk memulai script ini.\n
+          3. Setelah Musuh ketemu silahkan lakukan apapun.\n
+          4. Setelah selesai, kirim /adv lagi untuk melanjutkan.\n
+          5. Gunakan perintah /q untuk menghentikan script ini.""")
     try:
         await client.start()
         await send_adv(client)

@@ -5,6 +5,7 @@ from datetime import datetime
 from telethon.tl.custom import Button
 from script import gp
 from script import auto_search
+from script import ssf_auto
 from session_manager import get_user_session, get_connected_user_client, add_user, load_users 
 
 
@@ -42,20 +43,24 @@ async def show_reply_keyboard(event):
           tanggal = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 
       menu = f"""
-  ===============================
-  Daftar Script
-  ===============================
-  Tanggal: {tanggal}
+===============================
+Daftar Script
+===============================
+Halo {name}! 
+Tanggal: {tanggal}
 
-  Daftar Script:
-  1. /attack        - Script Auto Attack 
-  2. /naval         - Script naval
+Script tersedia:
+1. /attack        - Auto Attack
+2. /search        - Search Musuh
+3. /ssf           - Script Auto Claim SSF
 
 
-  /cek_session      - Cek nama session
-  /q                - Menghentikan Script
-  Terdaftar: {tanggal}
-  """
+
+/cek_session      - Cek nama session
+/q                - Stop semua script
+
+Terdaftar: {tanggal}
+"""
       # buttons = [
       #     [Button.inline("⚔️ Attack", b"attack")]
       # ]
@@ -96,16 +101,18 @@ async def start_handler(event):
 ===============================
 Daftar Script
 ===============================
-Halo {name}!
+Halo {name}! 
+Tanggal: {tanggal}
 
 Script tersedia:
 1. /attack        - Auto Attack
 2. /search        - Search Musuh
+3. /ssf           - Script Auto Claim SSF
 
 
 
 /cek_session      - Cek nama session
-/q - Stop semua script
+/q                - Stop semua script
 
 Terdaftar: {tanggal}
 """
@@ -174,6 +181,36 @@ async def run_search(event):
     if user_id not in running_tasks:
         running_tasks[user_id] = {}
     running_tasks[user_id]['search'] = task
+
+# ========================
+#  /ssf — Jalankan Script Auto CLaim SSF
+# ========================
+@bot_client.on(events.NewMessage(pattern="/attack"))
+async def run_attack(event):
+    user_id = event.sender_id
+    user_client = await get_connected_user_client(user_id, event)
+
+    if not user_client:
+        return  # Pesan error sudah dikirim oleh get_connected_user_client
+
+    ssf_auto.init(user_client, user_id)  # Daftarkan event handler jika ada
+
+    user_tasks = running_tasks.get(user_id, {})
+
+    if 'ssf' in user_tasks and not user_tasks['ssf'].done():
+        await event.respond("⚠️ Script Attack sudah berjalan untuk akun kamu.")
+        return
+
+    await event.respond("⚔️ Menjalankan Script Claim SSF...")
+
+    # Jalankan task
+    task = asyncio.create_task(gp.run_attack(user_id, user_client))
+
+    # Simpan task per user
+    if user_id not in running_tasks:
+        running_tasks[user_id] = {}
+    running_tasks[user_id]['attack'] = task
+
 
 # ========================
 #  /q — Matikan semua script
