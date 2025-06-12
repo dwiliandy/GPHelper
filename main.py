@@ -1,37 +1,47 @@
 from telethon import TelegramClient, events, Button
-import asyncio
 import os
+import asyncio
 from datetime import datetime
-from script import gp, auto_search, ssf_auto
-from session_manager import get_user_session, get_connected_user_client, add_user, load_users
+from dotenv import load_dotenv
 
+# ===========================
+# Load dan Konfigurasi Awal
+# ===========================
+load_dotenv()
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-bot_client = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+bot_client = TelegramClient("bot", API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
+# Simulasi struktur task dan session
 running_tasks = {}
+user_sessions = {}
 
-# ========================
-# /start — Tampilkan menu dan tombol keyboard
-# ========================
-@bot_client.on(events.NewMessage(pattern="/start"))
-async def start_handler(event):
+# Import modul script
+import auto_search, ssf_auto, gp  # Pastikan ini tersedia
+
+# ===========================
+# Fungsi Bantu
+# ===========================
+def get_user_session(user_id):
+    return user_sessions.get(user_id)
+
+async def get_connected_user_client(user_id, event):
+    # Simulasi client aktif dari session
+    session_name = get_user_session(user_id)
+    if not session_name:
+        await event.respond("⚠️ Session kamu belum terhubung.")
+        return None
+    return TelegramClient(session_name, API_ID, API_HASH)
+
+# ===========================
+# Menu Utama
+# ===========================
+async def show_main_menu(event):
     sender = await event.get_sender()
-    user_id = sender.id
     name = sender.first_name
-    username = sender.username
-
-    add_user(user_id, name, username)
-    users = load_users()
-    user_data = users.get(str(user_id), {})
-    tanggal = user_data.get("joined_at")
-    if tanggal:
-        dt = datetime.fromisoformat(tanggal)
-        tanggal = dt.strftime("%d-%m-%Y %H:%M:%S")
-    else:
-        tanggal = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    tanggal = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 
     menu = f"""
 ===============================
@@ -41,35 +51,71 @@ Halo {name}!
 Tanggal: {tanggal}
 
 Script tersedia:
-1. /attack        - Auto Attack
-2. /search        - Search Musuh
-3. /ssf 🐌        - Auto Claim SSF
+/attack        - Auto Attack
+/search        - Search Musuh
+/ssf 🐌         - Script Auto Claim SSF
 
-/cek_session      - Cek nama session
-/q                - Stop semua script
+/cek_session   - Cek nama session
+/q             - Stop semua script
+""".strip()
 
-Terdaftar: {tanggal}
-"""
+    inline_buttons = [
+        [
+            Button.inline("⚔️ /attack", b"cmd_attack"),
+            Button.inline("🔍 /search", b"cmd_search"),
+            Button.inline("🐌 /ssf", b"cmd_ssf")
+        ]
+    ]
 
-    await event.respond(menu, buttons=[
+    keyboard_buttons = [
         [Button.text("▶️ Start Script", resize=True)],
-        [Button.text("❌ Stop Semua Script", resize=True)]
-    ])
+        [Button.text("❌ Stop Semua Script", resize=True)],
+        [
+            Button.text("/attack", resize=True),
+            Button.text("/search", resize=True)
+        ],
+        [
+            Button.text("/ssf 🐌", resize=True),
+            Button.text("/cek_session", resize=True)
+        ]
+    ]
 
-# ========================
-# Tombol keyboard diproses seperti command
-# ========================
+    await event.respond(menu, buttons=inline_buttons)
+    await event.respond("Gunakan tombol di bawah atau ketik perintah.", buttons=keyboard_buttons)
+
+# ===========================
+# Handler Menu & Tombol
+# ===========================
+@bot_client.on(events.NewMessage(pattern="/start"))
+async def start_handler(event):
+    await show_main_menu(event)
+
 @bot_client.on(events.NewMessage(pattern="▶️ Start Script"))
 async def handle_start_script(event):
-    await event.respond("Ketik salah satu perintah:\n\n/attack\n/search\n/ssf\n/cek_session")
+    await show_main_menu(event)
 
 @bot_client.on(events.NewMessage(pattern="❌ Stop Semua Script"))
-async def handle_stop_script(event):
-    await quit_all(event)
+async def handle_quit_script(event):
+    await event.respond("/q")
 
-# ========================
+@bot_client.on(events.CallbackQuery(data=b"cmd_attack"))
+async def inline_attack(event):
+    await event.respond("/attack")
+    await event.answer("Menjalankan /attack")
+
+@bot_client.on(events.CallbackQuery(data=b"cmd_search"))
+async def inline_search(event):
+    await event.respond("/search")
+    await event.answer("Menjalankan /search")
+
+@bot_client.on(events.CallbackQuery(data=b"cmd_ssf"))
+async def inline_ssf(event):
+    await event.respond("/ssf")
+    await event.answer("Menjalankan /ssf")
+
+# ===========================
 # Command untuk Script
-# ========================
+# ===========================
 @bot_client.on(events.NewMessage(pattern="/attack"))
 async def run_attack(event):
     user_id = event.sender_id
@@ -165,11 +211,10 @@ async def quit_all(event):
     running_tasks[user_id] = {}
     await event.respond(f"❌ {stop_count} Script kamu dihentikan.")
 
-    # Tampilkan menu lagi
-    await start_handler(event)
+    await show_main_menu(event)
 
-# ========================
+# ===========================
 # Jalankan bot
-# ========================
+# ===========================
 print("🤖 Bot Helper aktif. Kirim /start ke bot kamu.")
 bot_client.run_until_disconnected()
