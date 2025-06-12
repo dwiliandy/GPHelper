@@ -4,9 +4,11 @@ import re
 import time
 
 running_flags = {}
+bot_username = 'GrandPiratesBot'
 
 def init(client,user_id):
     """Mendaftarkan event handler ke user_client"""
+    @client.on(events.NewMessage(from_users=bot_username))
     async def handler(event):
         
     
@@ -60,11 +62,6 @@ def init(client,user_id):
 async def run_ssf(user_id, client):
     running_flags[user_id] = True
     print("⚔️ Memulai Script Auto Claim SSF...")
-    await client.respond(f"""Petunjuk Penggunaan: \n
-          1. Pastikan sudah perjalanan atau sampai Zou.\n
-          2. Gunakan perintah /ssf untuk memulai script ini.\n
-          3. Script akan otomatis mengklaim SSF setiap 2 detik.\n
-          4. Gunakan perintah /q untuk menghentikan script ini.""")
     try:
         while True:
             await asyncio.sleep(2)  # delay agar tidak terlalu cepat
