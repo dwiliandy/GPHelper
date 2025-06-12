@@ -47,7 +47,7 @@ Tanggal: {tanggal}
 Script tersedia:
 /attack        - Auto Attack
 /search        - Search Musuh
-/ssf 🐌         - Script Auto Claim SSF
+/ssf           - Script Auto Claim SSF
 
 /cek_session   - Cek nama session
 /q             - Stop semua script
@@ -63,15 +63,7 @@ Script tersedia:
 
     keyboard_buttons = [
         [Button.text("▶️ Start Script", resize=True)],
-        [Button.text("❌ Stop Semua Script", resize=True)],
-        [
-            Button.text("/attack", resize=True),
-            Button.text("/search", resize=True)
-        ],
-        [
-            Button.text("/ssf 🐌", resize=True),
-            Button.text("/cek_session", resize=True)
-        ]
+        [Button.text("❌ Stop Semua Script", resize=True)]
     ]
 
     await event.respond(menu, buttons=inline_buttons)
