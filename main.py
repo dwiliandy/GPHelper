@@ -1,13 +1,10 @@
 from telethon import TelegramClient, events, Button
-import os
 import asyncio
+import os
 from datetime import datetime
-from dotenv import load_dotenv
+from script import gp, auto_search, ssf_auto
+from session_manager import get_user_session, get_connected_user_client, add_user, load_users
 
-# ===========================
-# Load dan Konfigurasi Awal
-# ===========================
-load_dotenv()
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
