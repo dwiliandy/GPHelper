@@ -65,10 +65,6 @@ Terdaftar: {tanggal}
       #     [Button.inline("⚔️ Attack", b"attack")]
       # ]
 
-      buttons=[
-            [Button.text("Start")]
-        ]
-
       await event.respond(menu)
 
 
@@ -169,10 +165,16 @@ async def run_search(event):
     user_tasks = running_tasks.get(user_id, {})
 
     if 'search' in user_tasks and not user_tasks['search'].done():
-        await event.respond("⚠️ Script Searcb sudah berjalan untuk akun kamu.")
+        await event.respond("⚠️ Script Search sudah berjalan untuk akun kamu.")
         return
 
     await event.respond("🔍 Memulai Script Search...")
+    await event.respond(f"""Petunjuk Penggunaan: \n
+          1. Pastikan sudah di adventure paling jauh.\n
+          2. Kirim /adv ke bot untuk memulai script ini.\n
+          3. Setelah Musuh ketemu silahkan lakukan apapun.\n
+          4. Setelah selesai, kirim /adv lagi untuk melanjutkan.\n
+          5. Gunakan perintah /q untuk menghentikan script ini.""")
 
     # Jalankan task
     task = asyncio.create_task(auto_search.run_search(user_id, user_client))
@@ -202,6 +204,13 @@ async def run_ssf(event):
         return
 
     await event.respond("⚔️ Menjalankan Script Claim SSF...")
+    
+    await event.respond(f"""Petunjuk Penggunaan: \n
+          1. Pastikan sudah perjalanan atau sampai Zou.\n
+          2. Gunakan perintah /ssf untuk memulai script ini.\n
+          3. Script akan otomatis mengklaim SSF setiap 2 detik.\n
+          4. Gunakan perintah /q untuk menghentikan script ini.""")
+    
 
     # Jalankan task
     task = asyncio.create_task(ssf_auto.run_ssf(user_id, user_client))
@@ -209,7 +218,7 @@ async def run_ssf(event):
     # Simpan task per user
     if user_id not in running_tasks:
         running_tasks[user_id] = {}
-    running_tasks[user_id]['attack'] = task
+    running_tasks[user_id]['ssf'] = task
 
 
 # ========================
