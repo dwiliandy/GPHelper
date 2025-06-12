@@ -1,15 +1,18 @@
 from telethon import TelegramClient, events
-
-from load_env import API_ID, API_HASH, BOT_TOKEN
 import asyncio
+import os
 from datetime import datetime
 from telethon.tl.custom import Button
 from script import gp
 from script import auto_search
 from session_manager import get_user_session, get_connected_user_client, add_user, load_users 
 
-bot_client = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)# Akun user untuk mengirim perintah ke GrandPiratesBot (pakai nomor HP)
-# user_client = TelegramClient('session_name', API_ID, API_HASH)
+
+API_ID = int(os.getenv("API_ID"))
+API_HASH = os.getenv("API_HASH")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+bot_client = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
 
 # Dictionary untuk menyimpan task-task aktif
