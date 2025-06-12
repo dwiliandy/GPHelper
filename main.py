@@ -15,9 +15,6 @@ bot_client = TelegramClient("bot", API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 running_tasks = {}
 user_sessions = {}
 
-# Import modul script
-import auto_search, ssf_auto, gp  # Pastikan ini tersedia
-
 # ===========================
 # Fungsi Bantu
 # ===========================
