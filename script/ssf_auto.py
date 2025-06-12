@@ -57,10 +57,10 @@ def init(client,user_id):
           return
 
 
-async def run_attack(user_id, client):
+async def run_ssf(user_id, client):
     running_flags[user_id] = True
     print("⚔️ Memulai Script Auto Claim SSF...")
-    print(f"""Petunjuk Penggunaan: \n
+    await client.respond(f"""Petunjuk Penggunaan: \n
           1. Pastikan sudah perjalanan atau sampai Zou.\n
           2. Gunakan perintah /ssf untuk memulai script ini.\n
           3. Script akan otomatis mengklaim SSF setiap 2 detik.\n

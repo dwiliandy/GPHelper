@@ -172,7 +172,7 @@ async def run_search(event):
         await event.respond("⚠️ Script Searcb sudah berjalan untuk akun kamu.")
         return
 
-    await event.respond("⚔️ Menjalankan Script Search...")
+    await event.respond("🔍 Memulai Script Search...")
 
     # Jalankan task
     task = asyncio.create_task(auto_search.run_search(user_id, user_client))
@@ -185,8 +185,8 @@ async def run_search(event):
 # ========================
 #  /ssf — Jalankan Script Auto CLaim SSF
 # ========================
-@bot_client.on(events.NewMessage(pattern="/attack"))
-async def run_attack(event):
+@bot_client.on(events.NewMessage(pattern="/ssf"))
+async def run_ssf(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
 
@@ -198,13 +198,13 @@ async def run_attack(event):
     user_tasks = running_tasks.get(user_id, {})
 
     if 'ssf' in user_tasks and not user_tasks['ssf'].done():
-        await event.respond("⚠️ Script Attack sudah berjalan untuk akun kamu.")
+        await event.respond("⚠️ Script Claim SSF sudah berjalan untuk akun kamu.")
         return
 
     await event.respond("⚔️ Menjalankan Script Claim SSF...")
 
     # Jalankan task
-    task = asyncio.create_task(gp.run_attack(user_id, user_client))
+    task = asyncio.create_task(ssf_auto.run_ssf(user_id, user_client))
 
     # Simpan task per user
     if user_id not in running_tasks:
