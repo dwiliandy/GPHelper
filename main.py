@@ -2,8 +2,14 @@ from telethon import TelegramClient, events, Button
 import asyncio
 import os
 from datetime import datetime
+<<<<<<< HEAD
 from script import gp, auto_search, ssf_auto
 from session_manager import get_user_session, get_connected_user_client, add_user, load_users
+=======
+from telethon.tl.custom import Button
+from script import gp, auto_search, ssf_claim
+from session_manager import get_user_session, get_connected_user_client, add_user, load_users 
+>>>>>>> 2ceaa272b054a3355040cf735d64ea2adca1b948
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
@@ -21,6 +27,7 @@ user_sessions = {}
 def get_user_session(user_id):
     return user_sessions.get(user_id)
 
+<<<<<<< HEAD
 async def get_connected_user_client(user_id, event):
     # Simulasi client aktif dari session
     session_name = get_user_session(user_id)
@@ -33,8 +40,23 @@ async def get_connected_user_client(user_id, event):
 # Menu Utama
 # ===========================
 async def show_main_menu(event):
+=======
+# ===========================
+# Menu Utama
+# ===========================
+async def show_main_menu(event):
+
+    # Panggil add_user untuk simpan data user jika belum ada
+>>>>>>> 2ceaa272b054a3355040cf735d64ea2adca1b948
     sender = await event.get_sender()
     name = sender.first_name
+<<<<<<< HEAD
+=======
+
+    add_user(user_id, name, name) 
+    users = load_users()
+    user_data = users.get(str(user_id), {})
+>>>>>>> 2ceaa272b054a3355040cf735d64ea2adca1b948
     tanggal = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 
     menu = f"""
@@ -55,12 +77,44 @@ Script tersedia:
 
     inline_buttons = [
         [
+            Button.inline("⚔️ /attack", b"/attack"),
+            Button.inline("🔍 /search", b"/search"),
+            Button.inline("🐌 /ssf", b"/ssf")
+        ]
+    ]
+
+    keyboard_buttons = [
+        [Button.text("▶️ Start Script", resize=True)],
+        [Button.text("/q", resize=True)]
+    ]
+
+    await event.respond(menu, buttons=inline_buttons)
+    await event.respond("Gunakan tombol di bawah atau ketik perintah.", buttons=keyboard_buttons)
+
+# ===========================
+# Handler Menu & Tombol
+# ===========================
+@bot_client.on(events.NewMessage(pattern="/start"))
+async def start_handler(event):
+    await show_main_menu(event)
+
+@bot_client.on(events.NewMessage(pattern="▶️ Start Script"))
+async def handle_start_script(event):
+    await show_main_menu(event)
+
+/cek_session   - Cek nama session
+/q             - Stop semua script
+""".strip()
+
+    inline_buttons = [
+        [
             Button.inline("⚔️ /attack", b"cmd_attack"),
             Button.inline("🔍 /search", b"cmd_search"),
             Button.inline("🐌 /ssf", b"cmd_ssf")
         ]
     ]
 
+<<<<<<< HEAD
     keyboard_buttons = [
         [Button.text("▶️ Start Script", resize=True)],
         [Button.text("❌ Stop Semua Script", resize=True)]
@@ -102,6 +156,8 @@ async def inline_ssf(event):
 # ===========================
 # Command untuk Script
 # ===========================
+=======
+>>>>>>> 2ceaa272b054a3355040cf735d64ea2adca1b948
 @bot_client.on(events.NewMessage(pattern="/attack"))
 async def run_attack(event):
     user_id = event.sender_id
@@ -109,7 +165,11 @@ async def run_attack(event):
     if not user_client:
         return
 
+<<<<<<< HEAD
     auto_search.init(user_client, user_id)
+=======
+    auto_search.init(user_client, user_id)  # Daftarkan event handler jika ada
+>>>>>>> 2ceaa272b054a3355040cf735d64ea2adca1b948
     user_tasks = running_tasks.get(user_id, {})
     if 'attack' in user_tasks and not user_tasks['attack'].done():
         await event.respond("⚠️ Script Attack sudah berjalan.")
@@ -121,11 +181,37 @@ async def run_attack(event):
 
 @bot_client.on(events.NewMessage(pattern="/search"))
 async def run_search(event):
+      user_id = event.sender_id
+      user_client = await get_connected_user_client(user_id, event)
+      if not user_client:
+          return
+
+      auto_search.init(user_client, user_id)
+      user_tasks = running_tasks.get(user_id, {})
+      if 'search' in user_tasks and not user_tasks['search'].done():
+          await event.respond("⚠️ Script Search sudah berjalan.")
+          return
+
+      await event.respond("🔍 Menjalankan Script Search...")
+      await event.respond("""📘 Petunjuk Penggunaan:
+
+  1. Pastikan sudah di adventure paling jauh.
+  2. Kirim /adv ke bot untuk memulai script ini.
+  3. Setelah Musuh ketemu silahkan lakukan apapun.
+  4. Setelah selesai, kirim /adv lagi untuk melanjutkan.
+  5. Gunakan perintah /q untuk menghentikan script ini.
+  """)
+      task = asyncio.create_task(auto_search.run_search(user_id, user_client))
+      running_tasks.setdefault(user_id, {})['search'] = task
+
+@bot_client.on(events.NewMessage(pattern="/ssf"))
+async def run_ssf(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
         return
 
+<<<<<<< HEAD
     auto_search.init(user_client, user_id)
     user_tasks = running_tasks.get(user_id, {})
     if 'search' in user_tasks and not user_tasks['search'].done():
@@ -160,11 +246,23 @@ async def run_ssf(event):
     await event.respond("🐌 Menjalankan Script SSF...")
     await event.respond("""📘 Petunjuk Penggunaan:
 
+=======
+    ssf_claim.init(user_client, user_id)
+    user_tasks = running_tasks.get(user_id, {})
+    if 'ssf' in user_tasks and not user_tasks['ssf'].done():
+        await event.respond("⚠️ Script SSF sudah berjalan.")
+        return
+
+    await event.respond("🐌 Menjalankan Script SSF...")
+    await event.respond("""📘 Petunjuk Penggunaan:
+
+>>>>>>> 2ceaa272b054a3355040cf735d64ea2adca1b948
 1. Pastikan sudah perjalanan atau sampai Zou.
 2. Gunakan perintah /ssf untuk memulai script ini.
 3. Script akan otomatis mengklaim SSF setiap 2 detik.
 4. Gunakan perintah /q untuk menghentikan script ini.
 """)
+<<<<<<< HEAD
     task = asyncio.create_task(ssf_auto.run_ssf(user_id, user_client))
     running_tasks.setdefault(user_id, {})['ssf'] = task
 
@@ -176,6 +274,10 @@ async def cek_session(event):
         await event.respond("⚠️ Session tidak ditemukan untuk akun kamu.")
     else:
         await event.respond(f"📦 Session kamu: `{session_name}.session`")
+=======
+    task = asyncio.create_task(ssf_claim.run_ssf(user_id, user_client))
+    running_tasks.setdefault(user_id, {})['ssf'] = task
+>>>>>>> 2ceaa272b054a3355040cf735d64ea2adca1b948
 
 @bot_client.on(events.NewMessage(pattern="/q"))
 async def quit_all(event):
