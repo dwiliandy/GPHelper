@@ -1,33 +1,16 @@
-from telethon import TelegramClient, events, Button
+from telethon import TelegramClient, events
+from load_env import API_ID, API_HASH, BOT_TOKEN
 import asyncio
 import os
 from datetime import datetime
-from script import gp, auto_search, ssf_auto
+from telethon.tl.custom import Button
+from script import gp, auto_search, ssf_claim, ytta_GoldenSnail, nb
 from session_manager import get_user_session, get_connected_user_client, add_user, load_users
 
-API_ID = int(os.getenv("API_ID"))
-API_HASH = os.getenv("API_HASH")
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-
-bot_client = TelegramClient("bot", API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+bot_client = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
 # Simulasi struktur task dan session
 running_tasks = {}
-user_sessions = {}
-
-# ===========================
-# Fungsi Bantu
-# ===========================
-def get_user_session(user_id):
-    return user_sessions.get(user_id)
-
-async def get_connected_user_client(user_id, event):
-    # Simulasi client aktif dari session
-    session_name = get_user_session(user_id)
-    if not session_name:
-        await event.respond("⚠️ Session kamu belum terhubung.")
-        return None
-    return TelegramClient(session_name, API_ID, API_HASH)
 
 # ===========================
 # Menu Utama
@@ -35,7 +18,11 @@ async def get_connected_user_client(user_id, event):
 async def show_main_menu(event):
     sender = await event.get_sender()
     name = sender.first_name
+
+    add_user(user_id, name, name)
+    users = load_users()
     tanggal = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+
 
     menu = f"""
 ===============================
@@ -44,26 +31,38 @@ Daftar Script
 Halo {name}!
 Tanggal: {tanggal}
 
-Script tersedia:
-/attack        - Auto Attack
-/search        - Search Musuh
-/ssf           - Script Auto Claim SSF
+Perintah:
+```plaintext
+/attack           - Auto Attack
+/search          - Search Musuh
+/ssf                - Auto Claim SSF
+/gs                 - Gunakan Golden Snail
+/nb                 - NavalBattle Mode
 
-/cek_session   - Cek nama session
-/q             - Stop semua script
+
+/cek_session        - Cek session login
+/q                            - Stop semua script
 """.strip()
 
     inline_buttons = [
         [
-            Button.inline("⚔️ /attack", b"cmd_attack"),
-            Button.inline("🔍 /search", b"cmd_search"),
-            Button.inline("🐌 /ssf", b"cmd_ssf")
+            Button.inline("⚔️ Attack", b"/attack"),
+            Button.inline("🔍 Search", b"/search"),
+            Button.inline("🐌 Ssf", b"/ssf")
+        ],
+        [
+            Button.inline("🐌 Gs", b"/gs"),
+            Button.inline("🐌 Nb", b"/nb")
+        ],
+        [
+            Button.inline("Quit", b"/q"),
+            Button.inline("Cek Session", b"/cek_session")
         ]
     ]
 
     keyboard_buttons = [
         [Button.text("▶️ Start Script", resize=True)],
-        [Button.text("❌ Stop Semua Script", resize=True)]
+        [Button.text("/q", resize=True)]
     ]
 
     await event.respond(menu, buttons=inline_buttons)
@@ -80,41 +79,37 @@ async def start_handler(event):
 async def handle_start_script(event):
     await show_main_menu(event)
 
-@bot_client.on(events.NewMessage(pattern="❌ Stop Semua Script"))
-async def handle_quit_script(event):
-    await event.respond("/q")
+# Inline button handler
+@bot_client.on(events.CallbackQuery)
+async def handle_inline_button(event):
+    data = event.data.decode("utf-8")
 
-@bot_client.on(events.CallbackQuery(data=b"cmd_attack"))
-async def inline_attack(event):
-    await event.respond("/attack")
-    await event.answer("Menjalankan /attack")
+    command_map = {
+        "/attack": run_attack,
+        "/search": run_search,
+        "/ssf": run_ssf,
+        "/gs": run_gs,
+        "/nb": run_nb,
+        "/q": quit_all,
+        "/cek_session": cek_session
+    }
 
-@bot_client.on(events.CallbackQuery(data=b"cmd_search"))
-async def inline_search(event):
-    await event.respond("/search")
-    await event.answer("Menjalankan /search")
+    if data in command_map:
+        await command_map[data](event)
+    else:
+        await event.answer("Perintah tidak dikenali", alert=True)
 
-@bot_client.on(events.CallbackQuery(data=b"cmd_ssf"))
-async def inline_ssf(event):
-    await event.respond("/ssf")
-    await event.answer("Menjalankan /ssf")
-
-# ===========================
-# Command untuk Script
-# ===========================
 @bot_client.on(events.NewMessage(pattern="/attack"))
 async def run_attack(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
         return
-
     auto_search.init(user_client, user_id)
     user_tasks = running_tasks.get(user_id, {})
     if 'attack' in user_tasks and not user_tasks['attack'].done():
         await event.respond("⚠️ Script Attack sudah berjalan.")
         return
-
     await event.respond("⚔️ Menjalankan Script Attack...")
     task = asyncio.create_task(gp.run_attack(user_id, user_client))
     running_tasks.setdefault(user_id, {})['attack'] = task
@@ -125,13 +120,11 @@ async def run_search(event):
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
         return
-
     auto_search.init(user_client, user_id)
     user_tasks = running_tasks.get(user_id, {})
     if 'search' in user_tasks and not user_tasks['search'].done():
         await event.respond("⚠️ Script Search sudah berjalan.")
         return
-
     await event.respond("🔍 Menjalankan Script Search...")
     await event.respond("""📘 Petunjuk Penggunaan:
 
@@ -150,13 +143,11 @@ async def run_ssf(event):
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
         return
-
-    ssf_auto.init(user_client, user_id)
+    ssf_claim.init(user_client, user_id)
     user_tasks = running_tasks.get(user_id, {})
     if 'ssf' in user_tasks and not user_tasks['ssf'].done():
         await event.respond("⚠️ Script SSF sudah berjalan.")
         return
-
     await event.respond("🐌 Menjalankan Script SSF...")
     await event.respond("""📘 Petunjuk Penggunaan:
 
@@ -165,17 +156,54 @@ async def run_ssf(event):
 3. Script akan otomatis mengklaim SSF setiap 2 detik.
 4. Gunakan perintah /q untuk menghentikan script ini.
 """)
-    task = asyncio.create_task(ssf_auto.run_ssf(user_id, user_client))
+    task = asyncio.create_task(ssf_claim.run_ssf(user_id, user_client))
     running_tasks.setdefault(user_id, {})['ssf'] = task
 
-@bot_client.on(events.NewMessage(pattern="/cek_session"))
-async def cek_session(event):
+@bot_client.on(events.NewMessage(pattern="/gs"))
+async def run_gs(event):
     user_id = event.sender_id
-    session_name = get_user_session(user_id)
-    if not session_name:
-        await event.respond("⚠️ Session tidak ditemukan untuk akun kamu.")
-    else:
-        await event.respond(f"📦 Session kamu: `{session_name}.session`")
+    user_client = await get_connected_user_client(user_id, event)
+    if not user_client:
+        return
+    ytta_GoldenSnail.init(user_client, user_id)
+    user_tasks = running_tasks.get(user_id, {})
+    if 'gs' in user_tasks and not user_tasks['gs'].done():
+        await event.respond("⚠️ Script GoldenSnail sudah berjalan.")
+        return
+    await event.respond("🐌 Menjalankan Script GoldenSnail...")
+    await event.respond("""📘 Petunjuk:
+
+1. Simpan config di Saved Messages dengan format: `batas_gs=5` jika ingin stop saat tersisa 5.
+2. Kirim perintah /gs untuk memulai script.
+3. Gunakan perintah /q untuk menghentikan script ini.
+""")
+    task = asyncio.create_task(ytta_GoldenSnail.run_gs(user_id, user_client))
+    running_tasks.setdefault(user_id, {})['gs'] = task
+
+@bot_client.on(events.NewMessage(pattern="/nb"))
+async def run_nb(event):
+    user_id = event.sender_id
+    user_client = await get_connected_user_client(user_id, event)
+    if not user_client:
+        return
+    nb.init(user_client, user_id)
+    user_tasks = running_tasks.get(user_id, {})
+    if 'nb' in user_tasks and not user_tasks['nb'].done():
+        await event.respond("Script NavalBattle sudah berjalan.")
+        return
+    await event.respond("Menjalankan Script NavalBattle...")
+    await event.respond("""Petunjuk Penggunaan:
+
+1. Pastikan kamu sudah berada di area laut (Adventure).
+2. Simpan konfigurasi di Saved Messages:
+   `snail = 200`
+   `use_grand_snail = yes`
+3. Kirim perintah /nb untuk memulai script NavalBattle.
+4. Script akan otomatis menyerang, gunakan GrandFleet & Snail.
+5. Gunakan perintah /q untuk menghentikan script ini.
+""")
+    task = asyncio.create_task(nb.run_nb(user_id, user_client))
+    running_tasks.setdefault(user_id, {})['nb'] = task
 
 @bot_client.on(events.NewMessage(pattern="/q"))
 async def quit_all(event):
@@ -184,7 +212,6 @@ async def quit_all(event):
     if not user_tasks:
         await event.respond("⚠️ Tidak ada Script yang sedang berjalan.")
         return
-
     stop_count = 0
     for name, task in list(user_tasks.items()):
         if task and not task.done():
@@ -193,14 +220,17 @@ async def quit_all(event):
                 await task
             except asyncio.CancelledError:
                 stop_count += 1
-
     running_tasks[user_id] = {}
     await event.respond(f"❌ {stop_count} Script kamu dihentikan.")
 
-    await show_main_menu(event)
+@bot_client.on(events.NewMessage(pattern="/cek_session"))
+async def cek_session(event):
+    user_id = event.sender_id
+    session_name = get_user_session(user_id)
+    if not session_name:
+        await event.respond("⚠️ Session tidak ditemukan untuk akun kamu.")
+        return
+    await event.respond(f"📦Session kamu: `{session_name}.session`")
 
-# ===========================
-# Jalankan bot
-# ===========================
-print("🤖 Bot Helper aktif. Kirim /start ke bot kamu.")
+print("Bot Helper aktif. Kirim /start ke bot kamu.")
 bot_client.run_until_disconnected()
