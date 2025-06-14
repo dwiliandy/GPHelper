@@ -1,7 +1,6 @@
 from telethon import TelegramClient, events
 from load_env import API_ID, API_HASH, BOT_TOKEN
 import asyncio
-import os
 from datetime import datetime
 from telethon.tl.custom import Button
 from script import gp, auto_search, ssf_claim, ytta_GoldenSnail, nb
@@ -9,7 +8,6 @@ from session_manager import get_user_session, get_connected_user_client, add_use
 
 bot_client = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
-# Simulasi struktur task dan session
 running_tasks = {}
 
 # ===========================
@@ -17,6 +15,7 @@ running_tasks = {}
 # ===========================
 async def show_main_menu(event):
     sender = await event.get_sender()
+    user_id = sender.id
     name = sender.first_name
 
     add_user(user_id, name, name)
@@ -108,7 +107,7 @@ async def run_attack(event):
     auto_search.init(user_client, user_id)
     user_tasks = running_tasks.get(user_id, {})
     if 'attack' in user_tasks and not user_tasks['attack'].done():
-        await event.respond("⚠️ Script Attack sudah berjalan.")
+        await event.respond("⚠️ Script Attack sudah berjalan untuk akun kamu.")
         return
     await event.respond("⚔️ Menjalankan Script Attack...")
     task = asyncio.create_task(gp.run_attack(user_id, user_client))
@@ -210,7 +209,7 @@ async def quit_all(event):
     user_id = event.sender_id
     user_tasks = running_tasks.get(user_id, {})
     if not user_tasks:
-        await event.respond("⚠️ Tidak ada Script yang sedang berjalan.")
+        await event.respond("⚠️ Tidak ada Script yang sedang berjalan untuk kamu.")
         return
     stop_count = 0
     for name, task in list(user_tasks.items()):
