@@ -31,12 +31,11 @@ Halo {name}!
 Tanggal: {tanggal}
 
 Perintah:
-```plaintext
 /attack           - Auto Attack
-/search          - Search Musuh
+/search          - Auto Search Musuh
 /ssf                - Auto Claim SSF
-/gs                 - Gunakan Golden Snail
-/nb                 - NavalBattle Mode
+/gs                 - Auto Golden Snail
+/nb                 - Auto Attack Naval Battle
 
 
 /cek_session        - Cek session login
@@ -110,6 +109,12 @@ async def run_attack(event):
         await event.respond("⚠️ Script Attack sudah berjalan untuk akun kamu.")
         return
     await event.respond("⚔️ Menjalankan Script Attack...")
+    await event.respond("""📘 Petunjuk Penggunaan:
+
+1. Pastikan sudah di pulau yang ingin di serang.
+3. Script akan otomatis cek EXP Kapal dan upgrade bila sudah bisa di upgrade.
+4. Gunakan perintah /q untuk menghentikan script ini.
+""")
     task = asyncio.create_task(gp.run_attack(user_id, user_client))
     running_tasks.setdefault(user_id, {})['attack'] = task
 
@@ -152,7 +157,7 @@ async def run_ssf(event):
 
 1. Pastikan sudah perjalanan atau sampai Zou.
 2. Gunakan perintah /ssf untuk memulai script ini.
-3. Script akan otomatis mengklaim SSF setiap 2 detik.
+3. Script akan otomatis mengklaim SSF.
 4. Gunakan perintah /q untuk menghentikan script ini.
 """)
     task = asyncio.create_task(ssf_claim.run_ssf(user_id, user_client))
@@ -190,15 +195,15 @@ async def run_nb(event):
     if 'nb' in user_tasks and not user_tasks['nb'].done():
         await event.respond("Script NavalBattle sudah berjalan.")
         return
-    await event.respond("Menjalankan Script NavalBattle...")
-    await event.respond("""Petunjuk Penggunaan:
+    await event.respond("🐌 Menjalankan Script NavalBattle...")
+    await event.respond("""📘 Petunjuk Penggunaan:
 
 1. Pastikan kamu sudah berada di area laut (Adventure).
 2. Simpan konfigurasi di Saved Messages:
-   `snail = 200`
-   `use_grand_snail = yes`
+   `snail = 25/50/75/100/125/150/175/200/225/250/275/300/_`
+   `use_grand_snail = yes/no`
 3. Kirim perintah /nb untuk memulai script NavalBattle.
-4. Script akan otomatis menyerang, gunakan GrandFleet & Snail.
+4. Script akan otomatis menyerang.
 5. Gunakan perintah /q untuk menghentikan script ini.
 """)
     task = asyncio.create_task(nb.run_nb(user_id, user_client))
