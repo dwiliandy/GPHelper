@@ -4,7 +4,7 @@ from load_env import API_ID, API_HASH, BOT_TOKEN
 import asyncio
 from datetime import datetime
 from telethon.tl.custom import Button
-from script import gp, auto_search, ssf_claim
+from script import gp, auto_search, ssf_claim, ytta_GoldenSnail
 from session_manager import get_user_session, get_connected_user_client, add_user, load_users 
 
 bot_client = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)# Akun user untuk mengirim perintah ke GrandPiratesBot (pakai nomor HP)
@@ -41,6 +41,7 @@ Script tersedia:
 /attack        - Auto Attack
 /search        - Search Musuh
 /ssf           - Script Auto Claim SSF
+/gs            - Script Auto Use Golden Snail
 
 /cek_session   - Cek nama session
 /q             - Stop semua script
@@ -141,6 +142,31 @@ async def run_ssf(event):
 """)
     task = asyncio.create_task(ssf_claim.run_ssf(user_id, user_client))
     running_tasks.setdefault(user_id, {})['ssf'] = task
+
+
+@bot_client.on(events.NewMessage(pattern="/gs"))
+async def run_gs(event):
+    user_id = event.sender_id
+    user_client = await get_connected_user_client(user_id, event)
+    if not user_client:
+        return
+
+    ytta_GoldenSnail.init(user_client, user_id)
+    user_tasks = running_tasks.get(user_id, {})
+    if 'gs' in user_tasks and not user_tasks['gs'].done():
+        await event.respond("⚠️ Script GoldenSnail sudah berjalan.")
+        return
+
+    await event.respond("🐌 Menjalankan Script GoldenSnail...")
+    await event.respond("""📘 Petunjuk:
+
+1. Simpan config di Saved Messages dengan format: `batas_gs=5` jika ingin stop saat tersisa 5.
+2. Kirim perintah /gs untuk memulai script.
+3. Gunakan perintah /q untuk menghentikan script ini.
+""")
+    task = asyncio.create_task(ytta_GoldenSnail.run_gs(user_id, user_client))
+    running_tasks.setdefault(user_id, {})['gs'] = task
+
 
 # ========================
 #  /q — Matikan semua script
