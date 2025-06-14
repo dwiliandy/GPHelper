@@ -4,7 +4,7 @@ from load_env import API_ID, API_HASH, BOT_TOKEN
 import asyncio
 from datetime import datetime
 from telethon.tl.custom import Button
-from script import gp, auto_search, ssf_claim, ytta_GoldenSnail
+from script import gp, auto_search, ssf_claim, ytta_GoldenSnail, nb
 from session_manager import get_user_session, get_connected_user_client, add_user, load_users 
 
 bot_client = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)# Akun user untuk mengirim perintah ke GrandPiratesBot (pakai nomor HP)
@@ -42,6 +42,7 @@ Script tersedia:
 /search        - Search Musuh
 /ssf           - Script Auto Claim SSF
 /gs            - Script Auto Use Golden Snail
+/nb            - Script Auto NavalBattle
 
 /cek_session   - Cek nama session
 /q             - Stop semua script
@@ -166,6 +167,35 @@ async def run_gs(event):
 """)
     task = asyncio.create_task(ytta_GoldenSnail.run_gs(user_id, user_client))
     running_tasks.setdefault(user_id, {})['gs'] = task
+
+
+@bot_client.on(events.NewMessage(pattern="/nb"))
+async def run_nb(event):
+    user_id = event.sender_id
+    user_client = await get_connected_user_client(user_id, event)
+    if not user_client:
+        return
+
+    nb.init(user_client, user_id)  # Daftarkan event handler NavalBattle
+
+    user_tasks = running_tasks.get(user_id, {})
+    if 'nb' in user_tasks and not user_tasks['nb'].done():
+        await event.respond("⚠️ Script NavalBattle sudah berjalan.")
+        return
+
+    await event.respond("⚓ Menjalankan Script NavalBattle...")
+    await event.respond("""📘 Petunjuk Penggunaan:
+
+1. Pastikan kamu sudah berada di area laut (Adventure).
+2. Simpan konfigurasi di Saved Messages:
+   `snail = 200`
+   `use_grand_snail = yes`
+3. Kirim perintah /nb untuk memulai script NavalBattle.
+4. Script akan otomatis menyerang, gunakan GrandFleet & Snail.
+5. Gunakan perintah /q untuk menghentikan script ini.
+""")
+    task = asyncio.create_task(nb.run_nb(user_id, user_client))
+    running_tasks.setdefault(user_id, {})['nb'] = task
 
 
 # ========================
