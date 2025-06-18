@@ -44,7 +44,9 @@ def parse_encounter(text):
         if '😈' in line:
             match = re.search(r'😈 (.+)', line)
             if match:
-                enemies.append(match.group(1))
+                name_with_plus = match.group(1)
+                name = name_with_plus.split('+')[0].strip()  # Ambil bagian sebelum '+'
+                enemies.append(name)
     return enemies
 
 
@@ -58,7 +60,7 @@ def init(client,user_id):
       text = event.raw_text
 
       # Jika pesan mengandung daftar ✅ musuh yang sudah dilawan
-      if 'Kalahkan semua musuh yang ada di sini masing-masing minimal 5x untuk bisa lanjut ke area berikutnya.'in text:
+      if 'Kalahkan semua musuh yang ada di sini masing-masing minimal 5x untuk bisa lanjut ke area berikutnya.'in text or 'Telusuri dan kalahkan samurai-samurai di ShimotsukiCastle' in text:
           await get_config_from_saved(client)
           parse_defeated_enemies(text)
           await asyncio.sleep(1)
@@ -66,7 +68,7 @@ def init(client,user_id):
           return
 
       # Jika muncul encounter dengan musuh
-      if 'dihadang oleh' in text:
+      if 'dihadang oleh' in text or 'Kamu menelusuri ShimotsukiCastle' in text:
           enemies = parse_encounter(text)
           print(f'\033[94m[ENCOUNTER] {enemies}\033[0m')
           if len(enemies) > max_enemy_count:
