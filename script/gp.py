@@ -18,8 +18,9 @@ def init(client):
 
     @client.on(events.NewMessage(from_users=bot_username))
     async def handler(event):
-        sender = await event.get_sender()
-        user_id = sender.id
+        
+        user = await event.client.get_me()
+        user_id = user.id
 
         if not running_flags.get(user_id, False):
             return

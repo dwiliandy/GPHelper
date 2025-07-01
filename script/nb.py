@@ -27,6 +27,7 @@ async def update_config_from_saved(client, user_id):
                 if match:
                     state["use_grand_snail"] = match.group(1)
         break
+    print(f"🔧 Konfigurasi diperbarui untuk user {user_id}: {state}")
 
 def parse_stage_hp(text):
     stage = re.search(r"Stage (\d+)", text)
@@ -52,7 +53,11 @@ def init(client):
 
     @client.on(events.NewMessage(from_users=bot_username))
     async def handler(event):
-        user_id = event.sender_id
+        
+        print("📩 Handler aktif! Pesan masuk dari bot.")
+        user = await event.client.get_me()
+        user_id = user.id
+        print(user_id)
         if not running_flags.get(user_id, False):
             return
 
@@ -179,7 +184,7 @@ async def run_nb(user_id, client):
         "snail": "_",
         "use_grand_snail": "no"
     }
-
+    print(running_flags)
     print(f"⚓ Memulai Naval Battle untuk user {user_id}")
     try:
         await update_config_from_saved(client, user_id)
