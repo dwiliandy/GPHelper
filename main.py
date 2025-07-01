@@ -103,7 +103,7 @@ async def run_attack(event):
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
         return
-    auto_search.init(user_client, user_id)
+    gp.init(user_client)
     user_tasks = running_tasks.get(user_id, {})
 
     if 'attack' in user_tasks and not user_tasks['attack'].done():
@@ -125,7 +125,7 @@ async def run_search(event):
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
         return
-    auto_search.init(user_client, user_id)
+    auto_search.init(user_client)
     user_tasks = running_tasks.get(user_id, {})
     if 'search' in user_tasks and not user_tasks['search'].done():
         await event.respond("⚠️ Script Search sudah berjalan.")
@@ -148,7 +148,7 @@ async def run_ssf(event):
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
         return
-    ssf_claim.init(user_client, user_id)
+    ssf_claim.init(user_client)
     user_tasks = running_tasks.get(user_id, {})
     if 'ssf' in user_tasks and not user_tasks['ssf'].done():
         await event.respond("⚠️ Script SSF sudah berjalan.")
@@ -170,7 +170,7 @@ async def run_gs(event):
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
         return
-    ytta_GoldenSnail.init(user_client, user_id)
+    ytta_GoldenSnail.init(user_client)
     user_tasks = running_tasks.get(user_id, {})
     if 'gs' in user_tasks and not user_tasks['gs'].done():
         await event.respond("⚠️ Script GoldenSnail sudah berjalan.")
@@ -191,7 +191,7 @@ async def run_nb(event):
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
         return
-    nb.init(user_client, user_id)
+    nb.init(user_client)
     user_tasks = running_tasks.get(user_id, {})
     if 'nb' in user_tasks and not user_tasks['nb'].done():
         await event.respond("Script NavalBattle sudah berjalan.")

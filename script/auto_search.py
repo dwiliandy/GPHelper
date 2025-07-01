@@ -1,46 +1,79 @@
 from telethon import events
 import asyncio
 import re
-import random
 
-max_enemy_count = 0
-defeated_enemies = set()
-running_flags = {}
-registered_handlers = {}  # ✅ Tambahan baru
 bot_username = 'GrandPiratesBot'
-adv_event = asyncio.Event()
 
-# Ambil setting dari Saved Messages
-async def get_config_from_saved(client):
-    global max_enemy_count
-    async for msg in client.iter_messages('me', search='max_enemy'):
-        match = re.search(r'max_enemy\s*=\s*(\d+)', msg.raw_text)
-        if match:
-            max_enemy_count = int(match.group(1))
-            print(f'[CONFIG] Max musuh: {max_enemy_count}')
-            break
+# Per-user tracking
+running_flags = {}     # user_id: bool
+user_state = {}        # user_id: { defeated_enemies, max_enemy, adv_event }
+handler_registered = False
 
-# Kirim /adv
-async def send_adv(client):
-    await client.send_message(bot_username, '/adv')
+def init(client):
+    global handler_registered
+    if handler_registered:
+        return
 
-# Cek musuh yang sudah ✅
+    @client.on(events.NewMessage(from_users=bot_username))
+    async def handler(event):
+        user_id = event.sender_id
+        if not running_flags.get(user_id, False):
+            return
+
+        state = user_state[user_id]
+        text = event.raw_text
+
+        if "Kalahkan semua musuh" in text or "samurai-samurai di ShimotsukiCastle" in text:
+            await get_config_from_saved(event.client, user_id)
+            state["defeated_enemies"] = parse_defeated_enemies(text)
+            print(f"\033[91m[DEFEATED] {state['defeated_enemies']}\033[0m")
+            await asyncio.sleep(1)
+            await event.click(0, 0)
+            return
+
+        if "dihadang oleh" in text or "Kamu menelusuri ShimotsukiCastle" in text:
+            enemies = parse_encounter(text)
+            print(f"\033[94m[ENCOUNTER] {enemies}\033[0m")
+
+            if len(enemies) > state["max_enemy"]:
+                print("\033[93m[INFO] Lawan terlalu banyak, skip\033[0m")
+                await asyncio.sleep(1)
+                await event.click(1, 0)
+                return
+
+            if any(enemy not in state["defeated_enemies"] for enemy in enemies):
+                print("\033[92m[INFO] Musuh baru ditemukan, menunggu /adv...\033[0m")
+                await state["adv_event"].wait()
+                state["adv_event"].clear()
+            else:
+                print("\033[93m[INFO] Semua musuh sudah dikalahkan, skip\033[0m")
+                await asyncio.sleep(1)
+                await event.click(1, 0)
+            return
+
+        if "Energi untuk bertarung telah habis" in text:
+            print("[INFO] Energi habis, kirim restore_x dan adv")
+            await asyncio.sleep(1)
+            await event.client.send_message(bot_username, '/restore_x')
+            await asyncio.sleep(1)
+            await event.client.send_message(bot_username, '/adv')
+            return
+
+    handler_registered = True
+
+
 def parse_defeated_enemies(text):
-    global defeated_enemies
-    defeated_enemies.clear()
-    lines = text.splitlines()
-    for line in lines:
+    defeated = set()
+    for line in text.splitlines():
         if '✅' in line:
             match = re.search(r'😈 (.+?) ✅', line)
             if match:
-                defeated_enemies.add(match.group(1))
-    print(f'\033[91m[DEFEATED] {defeated_enemies}\033[0m')
+                defeated.add(match.group(1))
+    return defeated
 
-# Cek musuh di encounter
 def parse_encounter(text):
-    lines = text.splitlines()
     enemies = []
-    for line in lines:
+    for line in text.splitlines():
         if '😈' in line:
             match = re.search(r'😈 (.+)', line)
             if match:
@@ -49,67 +82,28 @@ def parse_encounter(text):
                 enemies.append(name)
     return enemies
 
-def init(client, user_id):
-    """Mendaftarkan event handler ke user_client hanya sekali per user"""
-    if user_id in registered_handlers:
-        return  # ✅ Sudah terdaftar, hindari duplikat handler
-
-    @client.on(events.NewMessage(from_users=bot_username))
-    async def handler(event):
-        if not running_flags.get(user_id, False):
-            return
-
-        text = event.raw_text
-
-        # Jika pesan mengandung daftar ✅ musuh yang sudah dilawan
-        if 'Kalahkan semua musuh' in text or 'samurai-samurai di ShimotsukiCastle' in text:
-            await get_config_from_saved(client)
-            parse_defeated_enemies(text)
-            await asyncio.sleep(1)
-            await event.click(0, 0)
-            return
-
-        # Encounter musuh
-        if 'dihadang oleh' in text or 'menelusuri ShimotsukiCastle' in text:
-            enemies = parse_encounter(text)
-            print(f'\033[94m[ENCOUNTER] {enemies}\033[0m')
-            if len(enemies) > max_enemy_count:
-                print("\033[93m[INFO] Lawan terlalu banyak\033[0m")
-                await asyncio.sleep(1)
-                await event.click(1, 0)  # Skip
-                return
-
-            new_enemy_found = any(enemy not in defeated_enemies for enemy in enemies)
-            if new_enemy_found:
-                print("\033[92m[INFO] Musuh ditemukan, menunggu /adv dari user...\033[0m")
-                await adv_event.wait()
-                adv_event.clear()
-            else:
-                print("\033[93m[INFO] Semua musuh sudah dikalahkan, skip\033[0m")
-                await asyncio.sleep(1)
-                await event.click(1, 0)
-
-        if 'Energi untuk bertarung telah habis' in text:
-            print("[INFO] Energi habis, kirim restore_x")
-            await asyncio.sleep(1)
-            await client.send_message(bot_username, '/restore_x')
-            await asyncio.sleep(1)
-            await client.send_message(bot_username, '/adv')
-            await asyncio.sleep(1)
-            return
-
-    registered_handlers[user_id] = handler  # ✅ Tandai bahwa handler sudah terdaftar
+async def get_config_from_saved(client, user_id):
+    async for msg in client.iter_messages('me', search='max_enemy'):
+        match = re.search(r'max_enemy\s*=\s*(\d+)', msg.raw_text)
+        if match:
+            user_state[user_id]["max_enemy"] = int(match.group(1))
+            print(f'[CONFIG] Max musuh: {user_state[user_id]["max_enemy"]}')
+            break
 
 async def run_search(user_id, client):
     running_flags[user_id] = True
-    print("🔍 Memulai Script Search...")
+    user_state[user_id] = {
+        "defeated_enemies": set(),
+        "max_enemy": 0,
+        "adv_event": asyncio.Event(),
+    }
+
+    print(f"🔍 Memulai Script Search untuk user {user_id}")
     try:
-        await client.start()
-        await send_adv(client)
-        print("[READY] Script berjalan...")
+        await client.send_message(bot_username, '/adv')
         while running_flags.get(user_id, False):
             await asyncio.sleep(2)
     except asyncio.CancelledError:
         running_flags[user_id] = False
-        print(f"❌ Script Search dihentikan untuk user {user_id}.")
+        print(f"❌ Script Search dihentikan untuk user {user_id}")
         raise

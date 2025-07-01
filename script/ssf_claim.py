@@ -2,39 +2,35 @@ from telethon import events
 import asyncio
 import re
 
-running_flags = {}
-state = {}
-registered_handlers = {}  # ✅ Perubahan baru
 bot_username = 'GrandPiratesBot'
 
-def init(client, user_id):
-    """Mendaftarkan event handler ke user_client"""
-    # ✅ Cek apakah handler sudah didaftarkan sebelumnya
-    if user_id in registered_handlers:
-        return  # sudah terdaftar, hindari dobel handler
-    
+running_flags = {}     # user_id: bool
+user_state = {}        # user_id: { tmp, ssf }
+handler_registered = False
+
+def init(client):
+    global handler_registered
+    if handler_registered:
+        return
+
     @client.on(events.NewMessage(from_users=bot_username))
     async def handler(event):
+        user_id = event.sender_id
         if not running_flags.get(user_id, False):
             return
-        
+
         text = event.raw_text
-        
-        # Inisialisasi state untuk user jika belum ada
-        if user_id not in state:
-            state[user_id] = {"tmp": 0, "ssf": []}
-        
-        user_state = state[user_id]
+        state = user_state[user_id]
 
         if 'Bayi-bayi siput laut 🐌BabySeaSnail disedot' in text:
-            user_state["tmp"] = 0
-            user_state["ssf"] = [x for x in event.text.split() if '/ssf_incubator' in x]
+            state["tmp"] = 0
+            state["ssf"] = [x for x in event.text.split() if '/ssf_incubator' in x]
             await asyncio.sleep(1)
-            if user_state["ssf"]:
-                await event.respond(user_state["ssf"][user_state["tmp"]])
+            if state["ssf"]:
+                await event.respond(state["ssf"][state["tmp"]])
             return
-        
-        if any(phrase in text for phrase in [
+
+        if any(msg in text for msg in [
             'SeaSnail masih belum berkembang',
             'SeaSnail akan bertambah besar',
             'SeaSnail sudah mencapai versi paling besar'
@@ -44,43 +40,48 @@ def init(client, user_id):
                 await asyncio.sleep(1)
                 await event.respond(match.group(1))
             return
-        
+
         if 'Kru peternak dikembalikan' in text:
             match = re.search(r'/ssf_incubator_(\d+)_(\d+)', text)
             if match:
                 await asyncio.sleep(1)
                 await event.respond(match.group(0))
             return
-        
+
         if 'Apa kamu yakin ingin mempekerjakan' in text:
             await asyncio.sleep(1)
             await event.click(0)
             return
-        
+
         if 'Berhasil mempekerjakan' in text:
             match = re.search(r'(/ssf_incubator_\d+)', text)
             if match:
                 await asyncio.sleep(1)
                 await event.respond(match.group(1))
             return
-        
+
         if 'cek /seaSnailFarm' in text:
-            user_state["tmp"] += 1
-            if user_state["tmp"] < len(user_state["ssf"]):
+            state["tmp"] += 1
+            if state["tmp"] < len(state["ssf"]):
                 await asyncio.sleep(1)
-                await event.respond(user_state["ssf"][user_state["tmp"]])
+                await event.respond(state["ssf"][state["tmp"]])
             return
-        
-    # ✅ Simpan handler yang sudah terdaftar agar tidak ganda
-    registered_handlers[user_id] = handler
+
+    handler_registered = True
+
 
 async def run_ssf(user_id, client):
     running_flags[user_id] = True
-    print("⚔️ Memulai Script Auto Claim SSF...")
+    user_state[user_id] = {
+        "tmp": 0,
+        "ssf": []
+    }
+
+    print(f"⚙️ Memulai Script SSF untuk user {user_id}")
     try:
-        while running_flags[user_id]:
+        while running_flags.get(user_id, False):
             await asyncio.sleep(2)
     except asyncio.CancelledError:
-        print(f"❌ Script Auto Claim SSF dihentikan untuk user {user_id}.")
         running_flags[user_id] = False
+        print(f"❌ Script SSF dihentikan untuk user {user_id}")
         raise

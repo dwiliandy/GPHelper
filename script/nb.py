@@ -6,14 +6,12 @@ from telethon import events
 
 bot_username = 'GrandPiratesBot'
 
-# Variabel global
-snail = "_"
-use_grand_snail = "no"
 running_flags = {}
-registered_handlers = {}  # ✅ Perubahan baru
+user_state = {}
+handler_registered = False
 
-async def update_config_from_saved(client):
-    global snail, use_grand_snail
+async def update_config_from_saved(client, user_id):
+    state = user_state[user_id]
     async for message in client.iter_messages('me', limit=10):
         if not message.text:
             continue
@@ -23,15 +21,12 @@ async def update_config_from_saved(client):
             if line.startswith("snail"):
                 match = re.search(r"snail\s*=\s*(\d+|_)", line)
                 if match:
-                    snail = match.group(1).strip()
+                    state["snail"] = match.group(1)
             elif line.startswith("use_grand_snail"):
                 match = re.search(r"use_grand_snail\s*=\s*(yes|no)", line)
                 if match:
-                    use_grand_snail = match.group(1)
+                    state["use_grand_snail"] = match.group(1)
         break
-
-    print(f"[CONFIG] snail = {snail}")
-    print(f"[CONFIG] use_grand_snail = {use_grand_snail}")
 
 def parse_stage_hp(text):
     stage = re.search(r"Stage (\d+)", text)
@@ -50,18 +45,19 @@ async def click_button(event, label):
                 return True
     return False
 
-def init(client, user_id):
-    # ✅ Cek apakah handler sudah didaftarkan sebelumnya
-    if user_id in registered_handlers:
-        return  # sudah terdaftar, hindari dobel handler
+def init(client):
+    global handler_registered
+    if handler_registered:
+        return
 
     @client.on(events.NewMessage(from_users=bot_username))
     async def handler(event):
+        user_id = event.sender_id
         if not running_flags.get(user_id, False):
             return
 
         text = event.raw_text
-        logging.info(f"[BOT] {text.splitlines()[0]}")
+        state = user_state[user_id]
 
         if has_button(event, "Area Sebelumnya") or has_button(event, "Area Selanjutnya"):
             await asyncio.sleep(1)
@@ -84,7 +80,7 @@ def init(client, user_id):
             return
 
         if "GrandFleet telah ikut berjuang" in text:
-            if use_grand_snail == "yes":
+            if state["use_grand_snail"] == "yes":
                 await asyncio.sleep(1)
                 await event.client.send_message(bot_username, "/use_GrandSnail")
             else:
@@ -122,7 +118,7 @@ def init(client, user_id):
                 await asyncio.sleep(1)
                 await click_button(event, "Attack")
             else:
-                if use_grand_snail == "yes":
+                if state["use_grand_snail"] == "yes":
                     await asyncio.sleep(1)
                     await event.client.send_message(bot_username, "/use_GrandSnail")
                 else:
@@ -131,8 +127,9 @@ def init(client, user_id):
             return
 
         if "Kesempatan serang telah habis" in text:
+            await update_config_from_saved(event.client, user_id)
+            snail = state["snail"]
             await asyncio.sleep(1)
-            await update_config_from_saved(event.client)
             if snail == "_":
                 await event.client.send_message(bot_username, "/use_SeaSnail")
             else:
@@ -145,11 +142,6 @@ def init(client, user_id):
             return
 
         if "Kesempatan serang NavalBattle dipulihkan" in text:
-            await asyncio.sleep(1)
-            await event.client.send_message(bot_username, "/nb")
-            return
-
-        if "Kamu berangkat ke area berikutnya" in text or "Kamu berangkat ke area sebelumnya" in text:
             await asyncio.sleep(1)
             await event.client.send_message(bot_username, "/nb")
             return
@@ -179,28 +171,22 @@ def init(client, user_id):
             running_flags[user_id] = False
             return
 
-    # ✅ Simpan handler yang sudah terdaftar agar tidak ganda
-    registered_handlers[user_id] = handler
+    handler_registered = True
 
-
-# Fungsi utama dipanggil dari main.py
 async def run_nb(user_id, client):
     running_flags[user_id] = True
-    await update_config_from_saved(client)
-    await client.send_message(bot_username, "/nb")
+    user_state[user_id] = {
+        "snail": "_",
+        "use_grand_snail": "no"
+    }
 
-    async def periodic_config_update():
-        while running_flags.get(user_id, False):
-            await update_config_from_saved(client)
-            await asyncio.sleep(10)
-
-    config_task = asyncio.create_task(periodic_config_update())
-
+    print(f"⚓ Memulai Naval Battle untuk user {user_id}")
     try:
+        await update_config_from_saved(client, user_id)
+        await client.send_message(bot_username, "/nb")
         while running_flags.get(user_id, False):
             await asyncio.sleep(2)
     except asyncio.CancelledError:
         running_flags[user_id] = False
-        config_task.cancel()
-        logging.info(f"❌ Script NavalBattle dihentikan untuk user {user_id}")
+        print(f"❌ NavalBattle dibatalkan untuk user {user_id}")
         raise
