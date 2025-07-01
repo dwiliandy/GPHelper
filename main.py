@@ -207,7 +207,7 @@ async def run_nb(event):
 4. Script akan otomatis menyerang.
 5. Gunakan perintah /q untuk menghentikan script ini.
 """)
-    task = asyncio.create_task(nb.run_nb(user_id, user_client))
+    task = asyncio.create_task(nb.run_nb(user_client))
     running_tasks.setdefault(user_id, {})['nb'] = task
 
 # ========================

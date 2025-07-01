@@ -16,17 +16,21 @@ async def update_config_from_saved(client, user_id):
         if not message.text:
             continue
         lines = message.text.strip().splitlines()
-        for line in lines:
-            line = line.strip().lower()
-            if line.startswith("snail"):
-                match = re.search(r"snail\s*=\s*(\d+|_)", line)
-                if match:
-                    state["snail"] = match.group(1)
-            elif line.startswith("use_grand_snail"):
-                match = re.search(r"use_grand_snail\s*=\s*(yes|no)", line)
-                if match:
-                    state["use_grand_snail"] = match.group(1)
-        break
+        if not lines:
+            continue
+        if lines[0].strip().startswith("===GRANDPIRATES CONFIGURATION==="):  # cari header
+            print(f"📄 Ditemukan konfigurasi:\n{lines}")
+            for line in lines[1:]:  # lewati header
+                line = line.strip().lower()
+                if line.startswith("snail"):
+                    match = re.search(r"snail\s*=\s*(\d+|_)", line)
+                    if match:
+                        state["snail"] = match.group(1)
+                elif line.startswith("use_grand_snail"):
+                    match = re.search(r"use_grand_snail\s*=\s*(yes|no)", line)
+                    if match:
+                        state["use_grand_snail"] = match.group(1)
+            break
     print(f"🔧 Konfigurasi diperbarui untuk user {user_id}: {state}")
 
 def parse_stage_hp(text):
@@ -53,11 +57,8 @@ def init(client):
 
     @client.on(events.NewMessage(from_users=bot_username))
     async def handler(event):
-        
-        print("📩 Handler aktif! Pesan masuk dari bot.")
         user = await event.client.get_me()
         user_id = user.id
-        print(user_id)
         if not running_flags.get(user_id, False):
             return
 
@@ -178,13 +179,15 @@ def init(client):
 
     handler_registered = True
 
-async def run_nb(user_id, client):
+async def run_nb(client):
+    me = await client.get_me()
+    user_id = me.id
+  
     running_flags[user_id] = True
     user_state[user_id] = {
         "snail": "_",
         "use_grand_snail": "no"
     }
-    print(running_flags)
     print(f"⚓ Memulai Naval Battle untuk user {user_id}")
     try:
         await update_config_from_saved(client, user_id)
