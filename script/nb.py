@@ -2,18 +2,16 @@ import asyncio
 import random
 import re
 import logging
-from telethon import TelegramClient, events
+from telethon import events
 
 bot_username = 'GrandPiratesBot'
 
 # Variabel global
 snail = "_"
-use_grand_snail = "no"  # string: "yes" atau "no"
+use_grand_snail = "no"
 running_flags = {}
+registered_handlers = {}  # ✅ Perubahan baru
 
-# Ambil config dari Saved Messages
-
-# Ambil config dari Saved Messages
 async def update_config_from_saved(client):
     global snail, use_grand_snail
     async for message in client.iter_messages('me', limit=10):
@@ -21,7 +19,7 @@ async def update_config_from_saved(client):
             continue
         lines = message.text.strip().splitlines()
         for line in lines:
-            line = line.strip().lower()  # Fix: konversi ke huruf kecil
+            line = line.strip().lower()
             if line.startswith("snail"):
                 match = re.search(r"snail\s*=\s*(\d+|_)", line)
                 if match:
@@ -34,7 +32,6 @@ async def update_config_from_saved(client):
 
     print(f"[CONFIG] snail = {snail}")
     print(f"[CONFIG] use_grand_snail = {use_grand_snail}")
-
 
 def parse_stage_hp(text):
     stage = re.search(r"Stage (\d+)", text)
@@ -54,6 +51,10 @@ async def click_button(event, label):
     return False
 
 def init(client, user_id):
+    # ✅ Cek apakah handler sudah didaftarkan sebelumnya
+    if user_id in registered_handlers:
+        return  # sudah terdaftar, hindari dobel handler
+
     @client.on(events.NewMessage(from_users=bot_username))
     async def handler(event):
         if not running_flags.get(user_id, False):
@@ -83,7 +84,7 @@ def init(client, user_id):
             return
 
         if "GrandFleet telah ikut berjuang" in text:
-            if use_grand_snail:
+            if use_grand_snail == "yes":
                 await asyncio.sleep(1)
                 await event.client.send_message(bot_username, "/use_GrandSnail")
             else:
@@ -121,7 +122,7 @@ def init(client, user_id):
                 await asyncio.sleep(1)
                 await click_button(event, "Attack")
             else:
-                if use_grand_snail:
+                if use_grand_snail == "yes":
                     await asyncio.sleep(1)
                     await event.client.send_message(bot_username, "/use_GrandSnail")
                 else:
@@ -178,6 +179,10 @@ def init(client, user_id):
             running_flags[user_id] = False
             return
 
+    # ✅ Simpan handler yang sudah terdaftar agar tidak ganda
+    registered_handlers[user_id] = handler
+
+
 # Fungsi utama dipanggil dari main.py
 async def run_nb(user_id, client):
     running_flags[user_id] = True
@@ -187,9 +192,8 @@ async def run_nb(user_id, client):
     async def periodic_config_update():
         while running_flags.get(user_id, False):
             await update_config_from_saved(client)
-            await asyncio.sleep(10)  # update config tiap 10 detik
+            await asyncio.sleep(10)
 
-    # Jalankan update config sebagai background task
     config_task = asyncio.create_task(periodic_config_update())
 
     try:

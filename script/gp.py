@@ -7,6 +7,7 @@ bot_username = 'GrandPiratesBot'
 buff_item = "use_Yubashiri_10"
 buff_max = 25
 buff = 25
+registered_handlers = {}  # ✅ Tambahan baru
 
 curr_exp = 0
 need_exp = 0
@@ -16,6 +17,9 @@ cek_kapal_event = asyncio.Event()
 
 def init(client,user_id):
     """Mendaftarkan event handler ke user_client"""
+    if user_id in registered_handlers:
+        return  # ✅ Sudah terdaftar, hindari duplikat handler
+    
     @client.on(events.NewMessage(from_users=bot_username))
     async def handler(event):
       global curr_exp, need_exp, buff  # Pastikan mengakses variabel global
@@ -93,6 +97,8 @@ def init(client,user_id):
                 print("⏰ Tidak ada tombol 'Telusuri' dalam 10 detik")
 
             await asyncio.sleep(2)
+
+    registered_handlers[user_id] = handler  # ✅ Tandai bahwa handler sudah terdaftar
 
 
 async def cekKapal(client):

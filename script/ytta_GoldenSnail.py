@@ -1,151 +1,156 @@
 import asyncio
 import random
 import re
-import time
 from telethon import events
 
 bot_username = 'GrandPiratesBot'
 
-# Variabel global
 running_flags = {}
-exp_now = exp_max = ship_level = golden_snail = 0
-ship_name = ""
-batas_gs = None
+registered_handlers = {}
+user_state = {}  # ✅ Simpan data per user
 
-# Ambil batas_gs dari 1 pesan di Saved Messages
+# Ambil batas_gs dari Saved Messages
 async def baca_batas_dari_saved(client):
     async for msg in client.iter_messages('me', search='batas_gs'):
         lines = msg.text.splitlines()
         for line in lines:
-            if 'batas_gs' in line:
-                match = re.search(r'batas_gs\s*=\s*(\d+)', line)
-                if match:
-                    return int(match.group(1))
+            match = re.search(r'batas_gs\s*=\s*(\d+)', line)
+            if match:
+                return int(match.group(1))
         break
     return None
 
-async def get_ship_info(bot_response):
-    global exp_now, exp_max, ship_name, ship_level
+async def get_ship_info(bot_response, user_id):
+    match_exp = re.search(r'EXP: ([\d,]+)/([\d,]+)', bot_response)
+    match_ship = re.search(r'🛳 (.+?) - Level (\d+)', bot_response)
 
-    exp_match = re.search(r'EXP: ([\d,]+)/([\d,]+)', bot_response)
-    ship_match = re.search(r'🛳 (.+?) - Level (\d+)', bot_response)
+    if not match_ship:
+        return
 
-    if not ship_match:
-        return None
-
-    ship_name = ship_match.group(1)
-    ship_level = int(ship_match.group(2))
+    ship_name = match_ship.group(1)
+    ship_level = int(match_ship.group(2))
     exp_now = 0
-    exp_max_expected = ship_level * 5000
+    exp_expected = ship_level * 5000
 
-    if exp_match:
-        exp_now = int(exp_match.group(1).replace(',', ''))
-        exp_max_real = int(exp_match.group(2).replace(',', ''))
-
-        if exp_max_real != exp_max_expected:
-            print(f"[PERINGATAN] EXP max dari bot: {exp_max_real} tidak cocok dengan {exp_max_expected} (Level x 5000)")
-        exp_max = exp_max_real
+    if match_exp:
+        exp_now = int(match_exp.group(1).replace(',', ''))
+        exp_max = int(match_exp.group(2).replace(',', ''))
     else:
-        print(f"[INFO] Tidak ditemukan EXP dari bot, pakai default Level x 5000 = {exp_max_expected}")
-        exp_max = exp_max_expected
+        exp_max = exp_expected
 
-    return (exp_now, exp_max, ship_name, ship_level)
+    user_state[user_id].update({
+        "ship_name": ship_name,
+        "ship_level": ship_level,
+        "exp_now": exp_now,
+        "exp_max": exp_max,
+    })
 
-async def get_golden_snail_count(bot_response):
-    match = re.search(r'GoldenSnail dimiliki: (\d+)', bot_response)
+async def get_golden_snail_count(text):
+    match = re.search(r'GoldenSnail dimiliki: (\d+)', text)
     return int(match.group(1)) if match else 0
 
-async def get_exp_gain(bot_response):
-    match = re.search(r'❇️ ([\d,]+) EXP Kapal', bot_response)
+async def get_exp_gain(text):
+    match = re.search(r'❇️ ([\d,]+) EXP Kapal', text)
     return int(match.group(1).replace(',', '')) if match else 0
 
-# Daftarkan handler
 def init(client, user_id):
+    if user_id in registered_handlers:
+        return
+
     @client.on(events.NewMessage(from_users=bot_username))
     async def handler(event):
-        global exp_now, exp_max, ship_name, ship_level, golden_snail, batas_gs
-
         if not running_flags.get(user_id, False):
-              return
+            return
 
         text = event.raw_text
+        state = user_state[user_id]
 
         if 'EXP:' in text and 'Level' in text:
-            info = await get_ship_info(text)
-            if info:
-                print(f'{ship_name} Lv.{ship_level}: {exp_now}/{exp_max}')
-                time.sleep(1)
-                await client.send_message(bot_username, '/i_GoldenSnail')
+            await get_ship_info(text, user_id)
+            s = user_state[user_id]
+            print(f"{s['ship_name']} Lv.{s['ship_level']}: {s['exp_now']}/{s['exp_max']}")
+            await asyncio.sleep(1)
+            await client.send_message(bot_username, '/i_GoldenSnail')
 
         elif 'GoldenSnail dimiliki:' in text:
-            time.sleep(1)
-            golden_snail = await get_golden_snail_count(text)
-            print(f'GoldenSnail tersedia: {golden_snail}')
-            time.sleep(1)
+            await asyncio.sleep(1)
+            gs = await get_golden_snail_count(text)
+            state["golden_snail"] = gs
+            print(f"GoldenSnail tersedia: {gs}")
+            await asyncio.sleep(1)
             await client.send_message(bot_username, '/use_GoldenSnail')
 
         elif 'Apa kamu yakin ingin melakukan panggilan' in text and event.buttons:
-            time.sleep(1)
+            await asyncio.sleep(1)
             await event.click(0)
 
         elif 'BUSTER CALL DILAKSANAKAN' in text:
-            time.sleep(1)
-            exp_gain = await get_exp_gain(text)
-            exp_now += exp_gain
-            golden_snail -= 1
-            print(f'+{exp_gain} EXP -> Total: {exp_now}/{exp_max}, GoldenSnail tersisa: {golden_snail}')
-            time.sleep(1)
+            await asyncio.sleep(1)
+            gain = await get_exp_gain(text)
+            state["exp_now"] += gain
+            state["golden_snail"] -= 1
 
-            if exp_now >= exp_max:
-                print("[INFO] EXP kapal mencapai maksimal. Lakukan level up.")
-                time.sleep(2)
+            print(f'+{gain} EXP -> Total: {state["exp_now"]}/{state["exp_max"]}, GoldenSnail: {state["golden_snail"]}')
+            await asyncio.sleep(1)
+
+            if state["exp_now"] >= state["exp_max"]:
+                print("[INFO] EXP maksimal, lakukan level up")
+                await asyncio.sleep(2)
                 await client.send_message(bot_username, '/levelupKapal')
-                time.sleep(1)
-                levelup_cmd = random.choice(['/levelupkapal_ATK', '/levelupkapal_DEF', '/levelupkapal_HP'])
-                await client.send_message(bot_username, levelup_cmd)
+                await asyncio.sleep(1)
+                cmd = random.choice(['/levelupkapal_ATK', '/levelupkapal_DEF', '/levelupkapal_HP'])
+                await client.send_message(bot_username, cmd)
 
-            elif golden_snail <= 0 or (batas_gs is not None and golden_snail <= batas_gs):
-                print("[INFO] GoldenSnail habis atau mencapai batas. Proses berhenti.")
+            elif state["golden_snail"] <= 0 or (state["batas_gs"] is not None and state["golden_snail"] <= state["batas_gs"]):
+                print("[INFO] GoldenSnail habis / sudah di bawah batas, script dihentikan.")
                 running_flags[user_id] = False
             else:
                 await client.send_message(bot_username, '/use_GoldenSnail')
 
         elif 'Apa kamu yakin ingin meningkatkan' in text and event.buttons:
-            time.sleep(1)
+            await asyncio.sleep(1)
             await event.click(0)
 
         elif 'Berhasil meningkatkan level' in text:
-            time.sleep(1)
-            ship_level += 1
-            print(f'Level Up! {ship_name} -> Lv.{ship_level}')
-            if  golden_snail <= 0 or (batas_gs is not None and golden_snail <= batas_gs):
-                print("Selesai. GoldenSnail habis, level maksimum tercapai, atau sudah sampai batas.")
+            await asyncio.sleep(1)
+            state["ship_level"] += 1
+            print(f"Level Up! {state['ship_name']} -> Lv.{state['ship_level']}")
+            if state["golden_snail"] <= 0 or (state["batas_gs"] is not None and state["golden_snail"] <= state["batas_gs"]):
+                print("Selesai. GS habis atau sudah sampai batas.")
                 running_flags[user_id] = False
             else:
-                time.sleep(1)
+                await asyncio.sleep(1)
                 await client.send_message(bot_username, 'kapal')
 
-# Fungsi utama yang dipanggil dari /gs di main.py
+    registered_handlers[user_id] = handler
+
 async def run_gs(user_id, client):
-    global batas_gs
-
     running_flags[user_id] = True
-    print("Memulai Script GoldenSnail...")
+    user_state[user_id] = {
+        "ship_name": "",
+        "ship_level": 0,
+        "exp_now": 0,
+        "exp_max": 0,
+        "golden_snail": 0,
+        "batas_gs": None,
+    }
 
+    print("🚀 Memulai Script GoldenSnail...")
     try:
-        batas_gs = await baca_batas_dari_saved(client)
-        if batas_gs is not None:
-            print(f'Trigger diterima. Batas GoldenSnail: {batas_gs}')
+        batas = await baca_batas_dari_saved(client)
+        user_state[user_id]["batas_gs"] = batas
+
+        if batas is not None:
+            print(f"✅ Batas GS: {batas}")
         else:
-            print('Trigger diterima. Tidak ada batas_gs, akan gunakan semua.')
+            print("✅ Tidak ada batas GS. Akan gunakan semuanya.")
 
         await client.send_message(bot_username, 'kapal')
 
-        # ⏳ Tahan task tetap hidup selama masih aktif
         while running_flags.get(user_id, False):
             await asyncio.sleep(2)
 
     except asyncio.CancelledError:
-        print(f"[INFO] Script GoldenSnail dibatalkan (/q) untuk user {user_id}")
+        print(f"❌ Script GoldenSnail dibatalkan untuk user {user_id}")
         running_flags[user_id] = False
         raise
