@@ -254,13 +254,6 @@ async def quit_all(event):
     # Ambil user_client jika tersedia
     user_client = await get_connected_user_client(user_id, event)
 
-    # ✅ Set stop_events (jika pakai)
-    from script import nb, mb  # tambahkan lainnya kalau ada
-    if user_id in nb.stop_events:
-        nb.stop_events[user_id].set()
-    if user_id in mb.stop_events:
-        mb.stop_events[user_id].set()
-
     # ✅ Cancel semua task
     for name, task in list(user_tasks.items()):
         if task and not task.done():
