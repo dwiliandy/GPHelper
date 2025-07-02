@@ -3,7 +3,7 @@ from load_env import API_ID, API_HASH, BOT_TOKEN
 import asyncio
 from datetime import datetime
 from telethon.tl.custom import Button
-from script import gp, auto_search, ssf_claim, ytta_GoldenSnail, nb
+from script import gp, auto_search, ssf_claim, ytta_GoldenSnail, nb, mb
 from session_manager import get_user_session, get_connected_user_client, add_user, load_users
 
 bot_client = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
@@ -36,6 +36,7 @@ Perintah:
 /ssf                - Auto Claim SSF
 /gs                 - Auto Golden Snail
 /nb                 - Auto Attack Naval Battle
+/mb                 - Auto Marine Base
 
 
 /cek_session        - Cek session login
@@ -50,7 +51,8 @@ Perintah:
         ],
         [
             Button.inline("🐌 Gs", b"/gs"),
-            Button.inline("🐌 Nb", b"/nb")
+            Button.inline("🐌 Nb", b"/nb"),
+            Button.inline("🗒 Mb", b"/mb")
         ],
         [
             Button.inline("Quit", b"/q"),
@@ -88,6 +90,7 @@ async def handle_inline_button(event):
         "/ssf": run_ssf,
         "/gs": run_gs,
         "/nb": run_nb,
+        "/mb": run_mb,
         "/q": quit_all,
         "/cek_session": cek_session
     }
@@ -210,6 +213,29 @@ async def run_nb(event):
     task = asyncio.create_task(nb.run_nb(user_client))
     running_tasks.setdefault(user_id, {})['nb'] = task
 
+
+@bot_client.on(events.NewMessage(pattern="/mb"))
+async def run_mb(event):
+    user_id = event.sender_id
+    user_client = await get_connected_user_client(user_id, event)
+    if not user_client:
+        return
+
+    mb.init(user_client)  # Inisialisasi handler hanya sekali
+    user_tasks = running_tasks.get(user_id, {})
+    if 'mb' in user_tasks and not user_tasks['mb'].done():
+        await event.respond("⚠️ Script MarineBase sudah berjalan.")
+        return
+
+    await event.respond("🗒 Menjalankan Script MarineBase...")
+    await event.respond("""📘 Petunjuk Penggunaan:
+1. Pastikan kamu sudah berada di Grove46.
+2. Script akan otomatis memasukkan kru ke misi dan mengeluarkan lagi jika requirement tidak tercapai.
+3. Gunakan perintah /q untuk menghentikan script ini.
+""")
+    task = asyncio.create_task(mb.run_mb(user_client))
+    running_tasks.setdefault(user_id, {})['mb'] = task
+    
 # ========================
 #  /q — Matikan semua script
 # ========================
