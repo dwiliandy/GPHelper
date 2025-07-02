@@ -1,6 +1,7 @@
 from telethon import TelegramClient, events
 from load_env import API_ID, API_HASH, BOT_TOKEN
 import asyncio
+import logging
 from datetime import datetime
 from telethon.tl.custom import Button
 from script import gp, auto_search, ssf_claim, ytta_GoldenSnail, nb, mb
@@ -192,6 +193,7 @@ async def run_gs(event):
 async def run_nb(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
+    
     if not user_client:
         return
     nb.init(user_client)
@@ -244,10 +246,22 @@ async def quit_all(event):
     user_id = event.sender_id
     user_tasks = running_tasks.get(user_id, {})
     if not user_tasks:
-        await event.respond("⚠️ Tidak ada Script yang sedang berjalan untuk kamu.")
+        await event.respond("⚠️ Tidak ada script yang sedang berjalan.")
         return
+
     stop_count = 0
 
+    # Ambil user_client jika tersedia
+    user_client = await get_connected_user_client(user_id, event)
+
+    # ✅ Set stop_events (jika pakai)
+    from script import nb, mb  # tambahkan lainnya kalau ada
+    if user_id in nb.stop_events:
+        nb.stop_events[user_id].set()
+    if user_id in mb.stop_events:
+        mb.stop_events[user_id].set()
+
+    # ✅ Cancel semua task
     for name, task in list(user_tasks.items()):
         if task and not task.done():
             task.cancel()
@@ -255,9 +269,16 @@ async def quit_all(event):
                 await task
             except asyncio.CancelledError:
                 stop_count += 1
+
+    # ✅ Kosongkan task list
     running_tasks[user_id] = {}
-    print (running_tasks)
-    await event.respond(f"❌ {stop_count} Script kamu dihentikan.")
+
+    # ✅ Disconnect client jika masih terhubung
+    if user_client and user_client.is_connected():
+        await user_client.disconnect()
+        logging.info(f"🔌 User {user_id} disconnected via /q")
+
+    await event.respond(f"❌ {stop_count} script kamu dihentikan & koneksi dimatikan.")
 
 @bot_client.on(events.NewMessage(pattern="/cek_session"))
 async def cek_session(event):
