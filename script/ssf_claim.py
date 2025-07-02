@@ -82,7 +82,9 @@ async def run_ssf(user_id, client):
     print(f"⚙️ Memulai Script SSF untuk user {user_id}")
     try:
         while running_flags.get(user_id, False):
-            await asyncio.sleep(2)
+            await asyncio.sleep(2)    
+            if asyncio.current_task().cancelled():
+              break
     except asyncio.CancelledError:
         running_flags[user_id] = False
         print(f"❌ Script SSF dihentikan untuk user {user_id}")

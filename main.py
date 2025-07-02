@@ -214,28 +214,28 @@ async def run_nb(event):
     running_tasks.setdefault(user_id, {})['nb'] = task
 
 
+
 @bot_client.on(events.NewMessage(pattern="/mb"))
 async def run_mb(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
         return
-
-    mb.init(user_client)  # Inisialisasi handler hanya sekali
+    mb.init(user_client)  # ✅ gunakan init dari script mb.py
     user_tasks = running_tasks.get(user_id, {})
     if 'mb' in user_tasks and not user_tasks['mb'].done():
-        await event.respond("⚠️ Script MarineBase sudah berjalan.")
+        await event.respond("Script MarineBase sudah berjalan.")
         return
-
     await event.respond("🗒 Menjalankan Script MarineBase...")
     await event.respond("""📘 Petunjuk Penggunaan:
+
 1. Pastikan kamu sudah berada di Grove46.
 2. Script akan otomatis memasukkan kru ke misi dan mengeluarkan lagi jika requirement tidak tercapai.
 3. Gunakan perintah /q untuk menghentikan script ini.
 """)
     task = asyncio.create_task(mb.run_mb(user_client))
     running_tasks.setdefault(user_id, {})['mb'] = task
-    
+
 # ========================
 #  /q — Matikan semua script
 # ========================

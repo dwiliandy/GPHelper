@@ -217,7 +217,9 @@ async def run_nb(client):
         await update_config_from_saved(client, user_id)
         await client.send_message(bot_username, "/nb")
         while running_flags.get(user_id, False):
-            await asyncio.sleep(2)
+            await asyncio.sleep(2)    
+            if asyncio.current_task().cancelled():
+              break
     except asyncio.CancelledError:
         logging.warning(f"❌ NavalBattle dibatalkan untuk user {user_id}")
         raise

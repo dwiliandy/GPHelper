@@ -104,7 +104,9 @@ async def run_search(user_id, client):
     try:
         await client.send_message(bot_username, '/adv')
         while running_flags.get(user_id, False):
-            await asyncio.sleep(2)
+            await asyncio.sleep(2)    
+            if asyncio.current_task().cancelled():
+              break
     except asyncio.CancelledError:
         running_flags[user_id] = False
         print(f"❌ Script Search dihentikan untuk user {user_id}")
