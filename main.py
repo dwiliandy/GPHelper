@@ -23,6 +23,10 @@ async def show_main_menu(event):
     users = load_users()
     tanggal = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 
+    user_client = await get_connected_user_client(user_id, event)
+    if not user_client:
+        await event.respond("❌ Gagal menyambung ulang ke akun kamu.")
+        return
 
     menu = f"""
 ===============================
@@ -106,6 +110,7 @@ async def run_attack(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
+        await event.respond("❌ Gagal menyambung ulang ke akun kamu.")
         return
     gp.init(user_client)
     user_tasks = running_tasks.get(user_id, {})
@@ -128,6 +133,7 @@ async def run_search(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
+        await event.respond("❌ Gagal menyambung ulang ke akun kamu.")
         return
     auto_search.init(user_client)
     user_tasks = running_tasks.get(user_id, {})
@@ -151,6 +157,7 @@ async def run_ssf(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
+        await event.respond("❌ Gagal menyambung ulang ke akun kamu.")
         return
     ssf_claim.init(user_client)
     user_tasks = running_tasks.get(user_id, {})
@@ -173,6 +180,7 @@ async def run_gs(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
+        await event.respond("❌ Gagal menyambung ulang ke akun kamu.")
         return
     ytta_GoldenSnail.init(user_client)
     user_tasks = running_tasks.get(user_id, {})
@@ -193,8 +201,8 @@ async def run_gs(event):
 async def run_nb(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
-    
     if not user_client:
+        await event.respond("❌ Gagal menyambung ulang ke akun kamu.")
         return
     nb.init(user_client)
     user_tasks = running_tasks.get(user_id, {})
@@ -222,6 +230,7 @@ async def run_mb(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:
+        await event.respond("❌ Gagal menyambung ulang ke akun kamu.")
         return
     mb.init(user_client)  # ✅ gunakan init dari script mb.py
     user_tasks = running_tasks.get(user_id, {})
@@ -253,7 +262,6 @@ async def quit_all(event):
 
     # Ambil user_client jika tersedia
     user_client = await get_connected_user_client(user_id, event)
-
     # ✅ Cancel semua task
     for name, task in list(user_tasks.items()):
         if task and not task.done():
@@ -283,4 +291,4 @@ async def cek_session(event):
     await event.respond(f"📦Session kamu: `{session_name}.session`")
 
 print("Bot Helper aktif. Kirim /start ke bot kamu.")
-bot_client.run_until_disconnected()
+bot_client.run_until_disconnected() 
