@@ -1,6 +1,7 @@
 import asyncio
 import random
 import re
+import logging
 from telethon import events
 
 bot_username = 'GrandPiratesBot'
@@ -132,8 +133,13 @@ async def run_gs(user_id, client):
         await baca_batas_dari_saved(client, user_id)
         await client.send_message(bot_username, "kapal")
         while running_flags.get(user_id, False):
-            await asyncio.sleep(2)
+            await asyncio.sleep(2)    
+            if asyncio.current_task().cancelled():
+              break
     except asyncio.CancelledError:
         print(f"❌ Script GS dibatalkan untuk user {user_id}")
         running_flags[user_id] = False
         raise
+    finally:
+        running_flags[user_id] = False
+        logging.info(f"✅ Golden Snail selesai untuk user {user_id}")

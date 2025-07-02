@@ -185,3 +185,6 @@ async def run_mb(client):
         except Exception as e:
             running_flags[user_id] = False
             logging.error(f"[FATAL] MarineBase error: {e}")
+        finally:
+            running_flags[user_id] = False
+            logging.info(f"✅ Marine Base selesai untuk user {user_id}")

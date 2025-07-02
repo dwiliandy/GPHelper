@@ -1,6 +1,7 @@
 import asyncio
 import re
 import random
+import logging
 from telethon import events
 
 bot_username = 'GrandPiratesBot'
@@ -130,3 +131,7 @@ async def run_attack(user_id, client):
         print(f"❌ Script Attack dihentikan untuk user {user_id}")
         running_flags[user_id] = False
         raise
+
+    finally:
+        running_flags[user_id] = False
+        logging.info(f"✅ Auto Grinding selesai untuk user {user_id}")

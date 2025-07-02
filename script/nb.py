@@ -229,3 +229,6 @@ async def run_nb(client):
     except Exception as e:
         running_flags[user_id] = False
         logging.error(f"[FATAL] NavalBattle error: {e}")
+    finally:
+        running_flags[user_id] = False
+        logging.info(f"✅ Naval Battle selesai untuk user {user_id}")

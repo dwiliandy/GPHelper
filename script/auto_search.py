@@ -1,6 +1,7 @@
 from telethon import events
 import asyncio
 import re
+import logging
 
 bot_username = 'GrandPiratesBot'
 
@@ -111,3 +112,6 @@ async def run_search(user_id, client):
         running_flags[user_id] = False
         print(f"❌ Script Search dihentikan untuk user {user_id}")
         raise
+    finally:
+        running_flags[user_id] = False
+        logging.info(f"✅ Auto Search selesai untuk user {user_id}")
