@@ -188,7 +188,7 @@ def init(client):
                 await event.client.send_message(bot_username, "/nb")
                 return
 
-            if "Kamu tidak memiliki 🐌SeaSnail" in text:
+            if "Kamu tidak memiliki 🐌SeaSnail" in text or "item dengan nama " in text:
                 logging.info("❌ Tidak punya SeaSnail, menghentikan script dan menutup koneksi.")
                 running_flags[user_id] = False
                 await event.client.disconnect()

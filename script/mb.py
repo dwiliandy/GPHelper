@@ -35,7 +35,7 @@ def init(client):
                 await asyncio.sleep(2)
                 await client.send_message(bot_username, '/mb_removeall')
                 await asyncio.sleep(4)
-                await client.disconnect()
+                await event.client.disconnect()
                 return
 
             if state['current_phase'] == 'start' and "marineBase_Misi" in text:
