@@ -10,15 +10,15 @@ running_flags = {}
 user_state = {}  # user_id: dict
 handler_registered = False
 
-async def baca_batas_dari_saved(client, user_id):
-    async for msg in client.iter_messages('me', search='batas_gs'):
+async def baca_use_gs_dari_saved(client, user_id):
+    async for msg in client.iter_messages('me', search='use_gs'):
         for line in msg.text.splitlines():
-            match = re.search(r'batas_gs\s*=\s*(\d+)', line)
+            match = re.search(r'use_gs\s*=\s*(\d+)', line)
             if match:
-                user_state[user_id]["batas_gs"] = int(match.group(1))
+                user_state[user_id]["use_gs"] = int(match.group(1))
                 return
         break
-    user_state[user_id]["batas_gs"] = None
+    user_state[user_id]["use_gs"] = None
 
 async def get_ship_info(text, user_id):
     match_ship = re.search(r'🛳 (.+?) - Level (\d+)', text)
@@ -51,7 +51,6 @@ def init(client):
 
     @client.on(events.NewMessage(from_users=bot_username))
     async def handler(event):
-        
         user = await event.client.get_me()
         user_id = user.id
         if not running_flags.get(user_id, False):
@@ -80,7 +79,8 @@ def init(client):
             gain = await get_exp_gain(text)
             state["exp_now"] += gain
             state["golden_snail"] -= 1
-            print(f'+{gain} EXP ➡️ Total: {state["exp_now"]}/{state["exp_max"]}, GS: {state["golden_snail"]}')
+            state["gs_used"] += 1
+            print(f'+{gain} EXP ➡️ Total: {state["exp_now"]}/{state["exp_max"]}, GS: {state["golden_snail"]}, Used: {state["gs_used"]}/{state["use_gs"]}')
 
             if state["exp_now"] >= state["exp_max"]:
                 print("[INFO] Level up dimulai")
@@ -90,11 +90,14 @@ def init(client):
                 await asyncio.sleep(1)
                 await event.client.send_message(bot_username, cmd)
 
-            elif state["golden_snail"] <= 0 or (
-                state["batas_gs"] is not None and state["golden_snail"] <= state["batas_gs"]
-            ):
-                print("[SELESAI] GoldenSnail habis / batas tercapai.")
+            elif state["use_gs"] is not None and state["gs_used"] >= state["use_gs"]:
+                print("[SELESAI] Sudah menggunakan GoldenSnail sebanyak use_gs.")
                 running_flags[user_id] = False
+
+            elif state["golden_snail"] <= 0:
+                print("[SELESAI] GoldenSnail habis.")
+                running_flags[user_id] = False
+
             else:
                 await asyncio.sleep(1)
                 await event.client.send_message(bot_username, '/use_GoldenSnail')
@@ -106,10 +109,11 @@ def init(client):
         elif 'Berhasil meningkatkan level' in text:
             state["ship_level"] += 1
             print(f'Level Up! {state["ship_name"]} -> Lv.{state["ship_level"]}')
-            if state["golden_snail"] <= 0 or (
-                state["batas_gs"] is not None and state["golden_snail"] <= state["batas_gs"]
-            ):
-                print("Selesai. GS habis atau mencapai batas.")
+            if state["use_gs"] is not None and state["gs_used"] >= state["use_gs"]:
+                print("Selesai. Sudah gunakan GS sebanyak use_gs.")
+                running_flags[user_id] = False
+            elif state["golden_snail"] <= 0:
+                print("Selesai. GoldenSnail habis.")
                 running_flags[user_id] = False
             else:
                 await asyncio.sleep(1)
@@ -125,17 +129,18 @@ async def run_gs(user_id, client):
         "ship_name": "",
         "ship_level": 0,
         "golden_snail": 0,
-        "batas_gs": None,
+        "use_gs": None,
+        "gs_used": 0,
     }
 
     print(f"🐌 Mulai GoldenSnail untuk user {user_id}")
     try:
-        await baca_batas_dari_saved(client, user_id)
+        await baca_use_gs_dari_saved(client, user_id)
         await client.send_message(bot_username, "kapal")
         while running_flags.get(user_id, False):
-            await asyncio.sleep(2)    
+            await asyncio.sleep(2)
             if asyncio.current_task().cancelled():
-              break
+                break
     except asyncio.CancelledError:
         print(f"❌ Script GS dibatalkan untuk user {user_id}")
         running_flags[user_id] = False
