@@ -12,6 +12,40 @@ running_flags = {}     # user_id: bool
 user_state = {}        # user_id: dict
 cek_kapal_event = asyncio.Event()
 
+# ============================
+# Load Config dari Saved Msg
+# ============================
+async def load_attack_config_from_saved(client, user_id):
+    default_buff = {
+        "buff_item": "use_Yubashiri_10",
+        "buff_max": 25
+    }
+
+    async for message in client.iter_messages('me', limit=10):
+        if not message.text:
+            continue
+
+        lines = message.text.strip().splitlines()
+        if not lines or not lines[0].strip().startswith("===GRANDPIRATES CONFIGURATION==="):
+            continue
+
+        for line in lines[1:]:
+            line = line.strip().lower()
+            if line.startswith("buff_item"):
+                match = re.search(r"buff_item\s*=\s*(\S+)", line)
+                if match:
+                    default_buff["buff_item"] = match.group(1)
+            elif line.startswith("buff_max"):
+                match = re.search(r"buff_max\s*=\s*(\d+)", line)
+                if match:
+                    default_buff["buff_max"] = int(match.group(1))
+        break  # ditemukan
+
+    return default_buff
+
+# ============================
+# Handler Event
+# ============================
 def init(client):
     global handler_registered
     if handler_registered:
@@ -19,7 +53,6 @@ def init(client):
 
     @client.on(events.NewMessage(from_users=bot_username))
     async def handler(event):
-        
         user = await event.client.get_me()
         user_id = user.id
 
@@ -34,6 +67,12 @@ def init(client):
         text = event.raw_text
 
         if state["buff"] <= 0:
+            if state["buff_item"] == "_":
+                print("🟡 Buff habis, tapi mode tanpa buff aktif.")
+                await asyncio.sleep(1)
+                await event.client.send_message(bot_username, "/adv")
+                return
+
             print(f"🔥 Buff habis, menggunakan item {state['buff_item']}")
             await event.client.send_message(bot_username, state['buff_item'])
             state["buff"] = state["buff_max"]
@@ -75,8 +114,11 @@ def init(client):
         return
 
     handler_registered = True
+    logging.info("[INIT] Handler Attack berhasil didaftarkan")
 
-
+# ============================
+# Cek EXP Kapal
+# ============================
 async def cekKapal(client, user_id):
     state = user_state[user_id]
     cek_kapal_event.clear()
@@ -108,13 +150,19 @@ async def cekKapal(client, user_id):
 
     cek_kapal_event.set()
 
-
+# ============================
+# Run Attack
+# ============================
 async def run_attack(user_id, client):
+    config = await load_attack_config_from_saved(client, user_id)
+    buff_item = config["buff_item"]
+    buff_max = config["buff_max"]
+
     running_flags[user_id] = True
     user_state[user_id] = {
-        "buff": 25,
-        "buff_max": 25,
-        "buff_item": "use_Yubashiri_10",
+        "buff": buff_max,
+        "buff_max": buff_max,
+        "buff_item": buff_item,
         "exp_now": 0,
         "exp_max": 0
     }
@@ -124,14 +172,13 @@ async def run_attack(user_id, client):
         await cekKapal(client, user_id)
         await client.send_message(bot_username, "/adv")
         while running_flags.get(user_id, False):
-            await asyncio.sleep(2)    
+            await asyncio.sleep(2)
             if asyncio.current_task().cancelled():
-              break
+                break
     except asyncio.CancelledError:
         print(f"❌ Script Attack dihentikan untuk user {user_id}")
         running_flags[user_id] = False
         raise
-
     finally:
         running_flags[user_id] = False
         logging.info(f"✅ Auto Grinding selesai untuk user {user_id}")
