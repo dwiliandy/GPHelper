@@ -5,7 +5,6 @@ import logging
 from telethon import events
 from telethon.errors import FloodWaitError
 
-# Konfigurasi logging
 logging.basicConfig(
     level=logging.INFO,
     format='[%(asctime)s] %(levelname)s - %(message)s',
@@ -16,7 +15,7 @@ bot_username = 'GrandPiratesBot'
 
 running_flags = {}
 user_state = {}
-handler_registered = False
+handlers = {}  # Menyimpan handler per client
 
 async def update_config_from_saved(client, user_id):
     state = user_state[user_id]
@@ -67,25 +66,24 @@ async def keep_alive(client):
             logging.debug("[KeepAlive] Ping sukses")
         except Exception as e:
             logging.warning(f"[KeepAlive] Ping gagal: {e}")
-        await asyncio.sleep(300)  # 5 menit
+        await asyncio.sleep(300)
 
 def init(client):
-    global handler_registered
-    if handler_registered:
+    # Cek apakah handler sudah ditambahkan ke client ini
+    if client in handlers:
         return
 
-    @client.on(events.NewMessage(from_users=bot_username))
     async def handler(event):
         try:
             user = await event.client.get_me()
             user_id = user.id
+
             if not running_flags.get(user_id, False):
                 return
 
             text = event.raw_text
             state = user_state[user_id]
 
-            # Navigasi area
             if has_button(event, "Area Sebelumnya") or has_button(event, "Area Selanjutnya"):
                 await asyncio.sleep(1)
                 await click_button(event, random.choice(["Area Sebelumnya", "Area Selanjutnya"]))
@@ -197,7 +195,9 @@ def init(client):
         except Exception as e:
             logging.error(f"[EVENT ERROR] {e}")
 
-    handler_registered = True
+    # Tambahkan handler dan simpan referensinya
+    client.add_event_handler(handler, events.NewMessage(from_users=bot_username))
+    handlers[client] = handler
     logging.info("[INIT] Handler NavalBattle berhasil didaftarkan")
 
 async def run_nb(client):
@@ -217,9 +217,9 @@ async def run_nb(client):
         await update_config_from_saved(client, user_id)
         await client.send_message(bot_username, "/nb")
         while running_flags.get(user_id, False):
-            await asyncio.sleep(2)    
+            await asyncio.sleep(2)
             if asyncio.current_task().cancelled():
-              break
+                break
     except asyncio.CancelledError:
         logging.warning(f"❌ NavalBattle dibatalkan untuk user {user_id}")
         raise
@@ -227,8 +227,13 @@ async def run_nb(client):
         logging.warning(f"[FLOOD] Tunggu {e.seconds} detik")
         await asyncio.sleep(e.seconds)
     except Exception as e:
-        running_flags[user_id] = False
         logging.error(f"[FATAL] NavalBattle error: {e}")
     finally:
-        running_flags[user_id] = False
+        # Bersihkan semua data & handler
+        running_flags.pop(user_id, None)
+        user_state.pop(user_id, None)
+        if client in handlers:
+            client.remove_event_handler(handlers[client], events.NewMessage(from_users=bot_username))
+            del handlers[client]
+            logging.info(f"[HANDLER] Dihapus untuk client {user_id}")
         logging.info(f"✅ Naval Battle selesai untuk user {user_id}")
