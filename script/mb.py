@@ -73,6 +73,28 @@ def init(client):
     client._marinebase_handler_registered = True
     logging.info("[INIT] Handler MarineBase berhasil didaftarkan")
 
+async def load_config_from_saved(client, user_id):
+    global priority_mission, priority_role
+
+    async for message in client.iter_messages('me', limit=10):
+        if not message.text:
+            continue
+
+        lines = message.text.strip().splitlines()
+        if not lines:
+            continue
+
+        if lines[0].strip().startswith("===GRANDPIRATES CONFIGURATION==="):
+            for line in lines[1:]:
+                if 'priority_mission' in line:
+                    parts = line.split('=', 1)[-1].strip()
+                    priority_mission = [p.strip() for p in parts.split(',') if p.strip()]
+                elif 'priority_role' in line:
+                    parts = line.split('=', 1)[-1].strip()
+                    priority_role = [p.strip() for p in parts.split(',') if p.strip()]
+            logging.info(f"🔧 Konfigurasi MarineBase diperbarui:\n - Mission: {priority_mission}\n - Role: {priority_role}")
+            break
+
 async def process_mission_classes(event, client, state):
     lines = event.raw_text.splitlines()
     state['class_commands'] = []
