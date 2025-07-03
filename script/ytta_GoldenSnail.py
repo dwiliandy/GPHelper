@@ -148,3 +148,4 @@ async def run_gs(user_id, client):
     finally:
         running_flags[user_id] = False
         logging.info(f"✅ Golden Snail selesai untuk user {user_id}")
+        await client.disconnect()
