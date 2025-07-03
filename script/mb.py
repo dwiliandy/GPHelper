@@ -190,7 +190,7 @@ async def run_mb(client):
             'mission_ids': [],
             'current_class': ''
         }
-
+        await load_config_from_saved(client, user_id)
         logging.info(f"🚀 Memulai MarineBase untuk user {user_id}")
         try:
             await client.send_message(bot_username, '/mb')
