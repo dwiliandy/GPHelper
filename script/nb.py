@@ -92,6 +92,8 @@ def init(client):
             if has_button(event, "Berangkat"):
                 await asyncio.sleep(1)
                 await click_button(event, "Berangkat")
+                await asyncio.sleep(1.5)
+                await event.client.send_message(bot_username, "/nb")
                 return
 
             if "kamu berangkat menuju" in text:
