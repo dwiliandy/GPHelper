@@ -262,7 +262,7 @@ async def run_ev(event):
         await event.respond("Script MarineBase sudah berjalan.")
         return
     await event.respond("🗒 Menjalankan Script MarineBase...")
-    task = asyncio.create_task(ev.run_mb(user_client))
+    task = asyncio.create_task(ev.run_ev(user_client))
     running_tasks.setdefault(user_id, {})['ev'] = task
 
 # ========================
