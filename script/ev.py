@@ -121,6 +121,7 @@ def init(client):
 
             elif "saat energi di bawah 10%" in text and event.buttons:
                 await asyncio.sleep(1)
+                await update_config_from_saved(client, user_id)
                 await event.client.send_message(bot_username, f"{state['event_cmd']}_restore")
                 return
 
