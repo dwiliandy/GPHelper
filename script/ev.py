@@ -89,12 +89,12 @@ def init(client):
                     await event.client.send_message(bot_username, state["event_cmd"])
                 return
 
-            if ("Masing-masing adventure terdiri dari" in text or "Pilih maksimal 14 kru" in text) and event.buttons:
+            elif ("Masing-masing adventure terdiri dari" in text or "Pilih maksimal 14 kru" in text) and event.buttons:
                 await asyncio.sleep(1)
                 await event.click(0)
                 return
 
-            if "dihadang oleh" in text:
+            elif "dihadang oleh" in text:
                 enemies = parse_encounter(text)
                 state["encountered_enemies"].update(enemies)
                 logging.info(f"[ENCOUNTER] {enemies}")
@@ -115,19 +115,19 @@ def init(client):
                     await event.click(1, 0)
                 return
 
-            if "saat energi di bawah 10%" in text and event.buttons:
+            elif "saat energi di bawah 10%" in text and event.buttons:
                 await asyncio.sleep(1)
                 await event.client.send_message(bot_username, f"{state['event_cmd']}_restore")
                 return
 
-            if "Apa kamu yakin ingin menggunakan" in text and event.buttons:
+            elif "Apa kamu yakin ingin menggunakan" in text and event.buttons:
                 await asyncio.sleep(1)
                 await event.click(0)
                 await asyncio.sleep(1)
                 await event.client.send_message(bot_username, state["event_cmd"])
                 return
 
-            if "KAMU MENANG!!" in text:
+            elif "KAMU MENANG!!" in text:
                 match = re.search(r'❇️ ([\d,]+) EXP Kapal', text)
                 if match:
                     gained = int(match.group(1).replace(",", ""))
@@ -141,12 +141,15 @@ def init(client):
                 await event.click(0)
                 return
 
-            if "Musuh menang..." in text and event.buttons:
+            elif "Musuh menang..." in text and event.buttons:
                 logging.info("[INFO] Kamu kalah")
                 await asyncio.sleep(1)
                 await event.click(0)
                 return
-
+            else:
+                logging.info("[INFO] Balasan tidak dikenali, kirim")
+                await client.send_message(bot_username, "/kapal")
+                await asyncio.sleep(1)
         except Exception as e:
             logging.error(f"[EVENT ERROR] {e}")
 
