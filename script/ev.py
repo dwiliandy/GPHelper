@@ -44,8 +44,8 @@ async def update_config_from_saved(client, user_id):
 def parse_encounter(text):
     enemies = []
     for line in text.splitlines():
-        if '😈' in line:
-            match = re.search(r'😈 (.+)', line)
+        if '👿' in line:
+            match = re.search(r'👿 (.+)', line)
             if match:
                 name = match.group(1).split('+')[0].strip()
                 enemies.append(name)
@@ -94,7 +94,6 @@ def init(client):
                 return
 
             if "dihadang oleh" in text:
-                print(f"[ENCOUNTER] {text}")
                 enemies = parse_encounter(text)
                 state["encountered_enemies"].update(enemies)
                 logging.info(f"[ENCOUNTER] {enemies}")
