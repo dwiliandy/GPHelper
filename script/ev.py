@@ -94,6 +94,7 @@ def init(client):
                 return
 
             if "dihadang oleh" in text:
+                print(f"[ENCOUNTER] {text}")
                 enemies = parse_encounter(text)
                 state["encountered_enemies"].update(enemies)
                 logging.info(f"[ENCOUNTER] {enemies}")
