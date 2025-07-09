@@ -23,7 +23,7 @@ async def update_config_from_saved(client, user_id):
         lines = message.text.strip().splitlines()
         if not lines:
             continue
-        if lines[0].strip().startswith("===EVENT==="):
+        if lines[0].strip().startswith("===GRANDPIRATES CONFIGURATION==="):
             for line in lines[1:]:
                 line = line.strip()
                 if line.startswith("event_cmd"):
