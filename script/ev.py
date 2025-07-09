@@ -109,7 +109,7 @@ def init(client):
                     await event.click(1, 0)
                     return
 
-                if any(enemy not in state["skip_enemies"] for enemy in enemies):
+                if all(enemy not in state["skip_enemies"] for enemy in enemies):
                     logging.info("[FIGHT] Musuh baru ditemukan, lawan!")
                     await asyncio.sleep(1)
                     await event.click(0, 0)
