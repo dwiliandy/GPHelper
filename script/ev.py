@@ -27,6 +27,7 @@ async def update_config_from_saved(client, user_id):
             for line in lines[1:]:
                 line = line.strip()
                 if line.startswith("event_cmd"):
+                    print(f"🔧 Memperbarui konfigurasi untuk user {user_id}: {line}")
                     match = re.search(r"event_cmd\s*=\s*['\"]?([^\s'\"]+)", line)
                     if match:
                         state["event_cmd"] = f"/{match.group(1)}"
