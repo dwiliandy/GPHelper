@@ -58,6 +58,8 @@ Perintah:
             Button.inline("🐌 Gs", b"/gs"),
             Button.inline("🐌 Nb", b"/nb"),
             Button.inline("🗒 Mb", b"/mb")
+        ],[
+            Button.inline("Event", b"/ev"),
         ],
         [
             Button.inline("Quit", b"/q"),
@@ -96,6 +98,7 @@ async def handle_inline_button(event):
         "/gs": run_gs,
         "/nb": run_nb,
         "/mb": run_mb,
+        '/ev': run_ev,
         "/q": quit_all,
         "/cek_session": cek_session
     }
