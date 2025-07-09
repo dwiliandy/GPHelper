@@ -88,6 +88,10 @@ def init(client):
                     await asyncio.sleep(1)
                     await event.client.send_message(bot_username, state["event_cmd"])
                 return
+            elif "Berhasil memulihkan energi Kelompok Adventure" in text:
+                await asyncio.sleep(2)
+                await event.client.send_message(bot_username, state["event_cmd"])
+                return
 
             elif ("Masing-masing adventure terdiri dari" in text or "Pilih maksimal 14 kru" in text) and event.buttons:
                 await asyncio.sleep(1)
