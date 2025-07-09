@@ -250,7 +250,7 @@ async def run_mb(event):
 
 
 @bot_client.on(events.NewMessage(pattern="/ev"))
-async def run_event(event):
+async def run_ev(event):
     user_id = event.sender_id
     user_client = await get_connected_user_client(user_id, event)
     if not user_client:

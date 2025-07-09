@@ -144,7 +144,7 @@ def init(client):
     handlers[client] = handler
     logging.info("[INIT] Handler A7S berhasil didaftarkan")
 
-async def run_a7s(client):
+async def run_ev(client):
     me = await client.get_me()
     user_id = me.id
 
