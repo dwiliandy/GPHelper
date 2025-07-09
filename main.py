@@ -4,7 +4,7 @@ import asyncio
 import logging
 from datetime import datetime
 from telethon.tl.custom import Button
-from script import gp, auto_search, ssf_claim, ytta_GoldenSnail, nb, mb
+from script import gp, auto_search, ssf_claim, ytta_GoldenSnail, nb, mb, ev
 from session_manager import get_user_session, get_connected_user_client, add_user, load_users
 
 bot_client = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
@@ -246,6 +246,24 @@ async def run_mb(event):
 """)
     task = asyncio.create_task(mb.run_mb(user_client))
     running_tasks.setdefault(user_id, {})['mb'] = task
+
+
+
+@bot_client.on(events.NewMessage(pattern="/ev"))
+async def run_event(event):
+    user_id = event.sender_id
+    user_client = await get_connected_user_client(user_id, event)
+    if not user_client:
+        await event.respond("❌ Gagal menyambung ulang ke akun kamu.")
+        return
+    ev.init(user_client)  # ✅ gunakan init dari script mb.py
+    user_tasks = running_tasks.get(user_id, {})
+    if 'ev' in user_tasks and not user_tasks['ev'].done():
+        await event.respond("Script MarineBase sudah berjalan.")
+        return
+    await event.respond("🗒 Menjalankan Script MarineBase...")
+    task = asyncio.create_task(ev.run_mb(user_client))
+    running_tasks.setdefault(user_id, {})['ev'] = task
 
 # ========================
 #  /q — Matikan semua script
