@@ -93,7 +93,7 @@ def init(client):
                 await event.client.send_message(bot_username, state["event_cmd"])
                 return
 
-            elif ("Masing-masing adventure terdiri dari" in text or "Stat sudah termasuk perhitungan sisa energy" in text) and event.buttons:
+            elif ("Masing-masing adventure terdiri dari" in text or "Stat sudah termasuk perhitungan sisa energi" in text) and event.buttons:
                 await asyncio.sleep(1)
                 await event.click(0)
                 return
@@ -144,6 +144,12 @@ def init(client):
                         await event.client.send_message(bot_username, "/levelupkapal_DEF")
                 await asyncio.sleep(1)
                 await event.click(0)
+                return
+            
+            elif "Apa kamu yakin ingin meningkatkan" in text and event.buttons:
+                await asyncio.sleep(1)
+                await event.click(0)
+                await asyncio.sleep(1)
                 return
             
             elif "Berhasil meningkatkan level" in text:
