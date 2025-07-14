@@ -2,3 +2,4 @@
 *.session-journal
 .env
 load_env.py
+bot_session
