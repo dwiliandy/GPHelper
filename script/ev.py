@@ -93,7 +93,7 @@ def init(client):
                 await event.client.send_message(bot_username, state["event_cmd"])
                 return
 
-            elif ("Masing-masing adventure terdiri dari" in text or "Pilih maksimal 14 kru" in text) and event.buttons:
+            elif ("Masing-masing adventure terdiri dari" in text or "Stat sudah termasuk perhitungan sisa energy" in text) and event.buttons:
                 await asyncio.sleep(1)
                 await event.click(0)
                 return
@@ -140,11 +140,16 @@ def init(client):
                     logging.info(f"[EXP] +{gained} → {state['current_exp']} / {state['need_exp']}")
                     if state["current_exp"] >= state["need_exp"]:
                         logging.info("[LEVEL UP] Kirim /levelupkapal_DEF")
-                        await asyncio.sleep(1)
+                        await asyncio.sleep(2)
                         await event.client.send_message(bot_username, "/levelupkapal_DEF")
                 await asyncio.sleep(1)
                 await event.click(0)
                 return
+            
+            elif "Berhasil meningkatkan level" in text:
+                logging.info("[INFO] Berhasil meningkatkan level kapal")
+                await client.send_message(bot_username, "/kapal")
+                await asyncio.sleep(1)
 
             elif "Musuh menang..." in text and event.buttons:
                 logging.info("[INFO] Kamu kalah")
