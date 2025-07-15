@@ -64,8 +64,8 @@ def init(client):
                                 state['removal_confirmed'].set()
 
             if 'Belum ada kru yang dipilih' in text:
-                logging.info("ℹ️ Tidak ada kru, lanjut ke kelas berikutnya.")
-                await add_next_mission(client, state)
+                logging.info("ℹ️ Tidak ada kru, lanjut ke proses berikutnya.")
+                await client.send_message(bot_username, '/mb_removeall')
 
         except Exception as e:
             logging.error(f"[MarineBase ERROR] {e}")
