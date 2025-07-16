@@ -25,7 +25,7 @@ def init(client):
         text = event.raw_text
         state = user_state[user_id]
 
-        if 'Bayi-bayi siput laut 🐌BabySeaSnail disedot' in text:
+        if 'Kalahkan musuh-musuh yang ada di Zou untu mendapatkannya.' in text:
             state["tmp"] = 0
             state["ssf"] = [x for x in event.text.split() if '/ssf_incubator' in x]
             await asyncio.sleep(1)
@@ -82,6 +82,7 @@ async def run_ssf(user_id, client):
 
     print(f"⚙️ Memulai Script SSF untuk user {user_id}")
     try:
+        await client.send_message(bot_username, "/ssf")
         while running_flags.get(user_id, False):
             await asyncio.sleep(2)    
             if asyncio.current_task().cancelled():
