@@ -24,7 +24,7 @@ def init(client):
 
         text = event.raw_text
         state = user_state[user_id]
-
+        logging.debug(f"[SSF] Pesan diterima: {text}")
         if 'Kalahkan musuh-musuh yang ada di Zou untu mendapatkannya.' in text:
             state["tmp"] = 0
             state["ssf"] = [x for x in event.text.split() if '/ssf_incubator' in x]
