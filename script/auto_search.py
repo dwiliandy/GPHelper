@@ -26,7 +26,7 @@ def init(client):
         state = user_state[user_id]
         text = event.raw_text
 
-        if "Kalahkan semua musuh" in text or "samurai-samurai di ShimotsukiCastle" in text:
+        if "Kalahkan semua musuh" in text or "samurai-samurai di ShimotsukiCastle" in text or "Kamu bisa langsung lanjut ke area berikutnya" in text:
             await get_config_from_saved(event.client, user_id)
             state["defeated_enemies"] = parse_defeated_enemies(text)
             print(f"\033[91m[DEFEATED] {state['defeated_enemies']}\033[0m")

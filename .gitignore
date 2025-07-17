@@ -1,5 +1,6 @@
 *.session
 *.session-journal
+*sessions_map.json
 .env
 load_env.py
 bot_session
