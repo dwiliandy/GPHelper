@@ -4,7 +4,7 @@ import asyncio
 import logging
 from datetime import datetime
 from telethon.tl.custom import Button
-from script import gp, auto_search, ssf_claim, ytta_GoldenSnail, nb, mb, ev
+from script import gp, auto_search, ssf_claim, ytta_GoldenSnail, nb, mb, ev, atk_cc
 from session_manager import get_user_session, get_connected_user_client, add_user, load_users
 
 bot_client = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
@@ -42,6 +42,8 @@ Perintah:
 /gs                 - Auto Golden Snail
 /nb                 - Auto Attack Naval Battle
 /mb                 - Auto Marine Base
+/cc                 - Auto CC Battle
+/ev                 - Auto Event
 
 
 /cek_session        - Cek session login
@@ -59,7 +61,9 @@ Perintah:
             Button.inline("🐌 Nb", b"/nb"),
             Button.inline("🗒 Mb", b"/mb")
         ],[
-            Button.inline("Event", b"/ev"),
+            
+            Button.inline("⚔️ CC Battle", b"/cc"),
+            Button.inline("Event", b"/ev")
         ],
         [
             Button.inline("Quit", b"/q"),
@@ -99,6 +103,7 @@ async def handle_inline_button(event):
         "/nb": run_nb,
         "/mb": run_mb,
         '/ev': run_ev,
+        "/cc": run_cc,
         "/q": quit_all,
         "/cek_session": cek_session
     }
@@ -250,6 +255,33 @@ async def run_mb(event):
     task = asyncio.create_task(mb.run_mb(user_client))
     running_tasks.setdefault(user_id, {})['mb'] = task
 
+@bot_client.on(events.NewMessage(pattern="/cc"))
+async def   run_cc(event):
+    user_id = event.sender_id
+    user_client = await get_connected_user_client(user_id, event)
+    if not user_client:
+        await event.respond("❌ Gagal menyambung ulang ke akun kamu.")
+        return
+    atk_cc.init(user_client)
+    user_tasks = running_tasks.get(user_id, {})
+    if 'cc' in user_tasks and not user_tasks['cc'].done():
+        await event.respond("Script CC Battle sudah berjalan.")
+        return
+    await event.respond("🗡 Menjalankan Script CC Battle...")
+    await event.respond("""📘 Petunjuk Penggunaan:
+
+1. Simpan konfigurasi kamu di Saved Messages seperti:
+
+===GRANDPIRATES CONFIGURATION===
+tier=sss,ss
+ally=Revolutionary,Navy
+
+2. Jalankan perintah /cc untuk mulai.
+3. Script akan mencari musuh, menyerang jika valid, dan buff setiap 10 menit.
+4. Gunakan perintah /q untuk menghentikan script ini.
+""")
+    task = asyncio.create_task(atk_cc.run_cc_battle(user_id, user_client))
+    running_tasks.setdefault(user_id, {})['cc'] = task
 
 
 @bot_client.on(events.NewMessage(pattern="/ev"))
