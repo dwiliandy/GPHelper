@@ -130,10 +130,10 @@ async def handle_buff_response(event, user_id):
     await event.client.send_message(bot_username, '/cc_battle')
 
 
-async def get_config_from_saved(client):
+async def get_config_from_saved(client, user_id):
     async for msg in client.iter_messages('me', search='tier'):
-        tier_match = re.search(r'tier=\s*(.+)', msg.raw_text, re.IGNORECASE)
-        ally_match = re.search(r'ally=\s*(.+)', msg.raw_text, re.IGNORECASE)
+        tier_match = re.search(r'tier\s*=\s*(.+)', msg.raw_text, re.IGNORECASE)
+        ally_match = re.search(r'ally\s*=\s*(.+)', msg.raw_text, re.IGNORECASE)
 
         if tier_match and ally_match:
             tiers = set(map(str.strip, tier_match.group(1).split(',')))
@@ -141,22 +141,25 @@ async def get_config_from_saved(client):
             print("[CONFIG] ✅ Konfigurasi ditemukan di Saved Messages:")
             print(f" - Tier yang dihindari : {tiers}")
             print(f" - Group yang dihindari: {groups}")
-            return tiers, groups
+            user_state[user_id]["valid_tiers"] = tiers
+            user_state[user_id]["blocked_groups"] = groups
+            return
 
-    print("[CONFIG] ❌ Tidak menemukan konfigurasi 'tier:' & 'ally:' di Saved Messages.")
-    return set(), set()
+    print("[CONFIG] ❌ Tidak menemukan konfigurasi 'tier' & 'ally' di Saved Messages.")
+    user_state[user_id]["valid_tiers"] = set()
+    user_state[user_id]["blocked_groups"] = set()
 
 
 async def run_cc_battle(user_id, client):
-    tiers, groups = await get_config_from_saved(client)
-
     running_flags[user_id] = True
     user_state[user_id] = {
         "buff_event": asyncio.Event(),
         "is_attacking": False,
-        "valid_tiers": set(tiers),
-        "blocked_groups": set(groups)
+        "valid_tiers": set(),
+        "blocked_groups": set()
     }
+
+    await get_config_from_saved(client, user_id)
 
     print(f"[CC] ▶️ Memulai Auto CC Battle untuk user {user_id}")
 
