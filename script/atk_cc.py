@@ -131,7 +131,10 @@ async def handle_buff_response(event, user_id):
 
 
 async def get_config_from_saved(client, user_id):
-    async for msg in client.iter_messages('me', search='tier'):
+    async for msg in client.iter_messages('me', limit=10):
+        if not msg.raw_text:
+            continue
+
         tier_match = re.search(r'tier\s*=\s*(.+)', msg.raw_text, re.IGNORECASE)
         ally_match = re.search(r'ally\s*=\s*(.+)', msg.raw_text, re.IGNORECASE)
 
@@ -148,6 +151,7 @@ async def get_config_from_saved(client, user_id):
     print("[CONFIG] ❌ Tidak menemukan konfigurasi 'tier' & 'ally' di Saved Messages.")
     user_state[user_id]["valid_tiers"] = set()
     user_state[user_id]["blocked_groups"] = set()
+
 
 
 async def run_cc_battle(user_id, client):
