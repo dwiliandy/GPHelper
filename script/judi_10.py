@@ -53,11 +53,11 @@ def init(client):
             "current_location": None,
         }
 
-        await run_judi(client, event, user_id)
+        await run_judi_10(client, event, user_id)
 
 # === LOGIC ===
 
-async def run_judi(client, event, user_id):
+async def run_judi_10(client, event, user_id):
     state = user_state[user_id]
 
     # Ambil total_play dari Saved Messages
