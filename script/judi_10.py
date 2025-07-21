@@ -1,18 +1,17 @@
 import asyncio
 import time
 
-# Penampung state per user
 running_flags = {}
 click_count = {}
 last_click_time = {}
 current_area = {}
 user_state = {}
+area_triggered = {}
 
 def init(client):
-    pass  # Disediakan untuk konsistensi antar script
+    pass
 
 async def get_total_play_config(client, user_id):
-    """Ambil konfigurasi total_play dari Saved Messages"""
     async for msg in client.iter_messages('me', limit=10):
         if not msg.text:
             continue
@@ -26,7 +25,6 @@ async def get_total_play_config(client, user_id):
     return "_"
 
 async def update_config_periodically(client, user_id):
-    """Update config tiap 60 detik"""
     while running_flags.get(user_id, False):
         config = await get_total_play_config(client, user_id)
         user_state[user_id]['total_play'] = config
@@ -34,22 +32,19 @@ async def update_config_periodically(client, user_id):
         await asyncio.sleep(60)
 
 async def run_judi_10(user_id, client):
-    """Fungsi utama untuk menjalankan fitur judi -10"""
     click_count[user_id] = 0
     last_click_time[user_id] = time.time()
     current_area[user_id] = None
     user_state[user_id] = {}
+    area_triggered[user_id] = set()
     running_flags[user_id] = True
 
-    # Ambil konfigurasi awal
     total_play = await get_total_play_config(client, user_id)
     user_state[user_id]['total_play'] = total_play or "_"
     print(f"[JUDI] total_play awal: {user_state[user_id]['total_play']}")
 
-    # Jalankan updater config
     config_task = asyncio.create_task(update_config_periodically(client, user_id))
 
-    # Handler respon dari bot
     async def handler(event):
         if not running_flags.get(user_id):
             return
@@ -57,21 +52,31 @@ async def run_judi_10(user_id, client):
         msg = event.message
         text = event.raw_text
 
-        # Deteksi area
+        # Deteksi area & kirim perintah sekali
         if "VIPArea: CasinoKing" in text:
             current_area[user_id] = "casino"
-            print("[JUDI] 🎲 Masuk area CasinoKing")
+            if "casino" not in area_triggered[user_id]:
+                area_triggered[user_id].add("casino")
+                print("[JUDI] 🎲 Deteksi CasinoKing, mengirim /casinoKing...")
+                await asyncio.sleep(1.5)
+                await client.send_message("GrandPiratesBot", "/casinoKing")
+                await asyncio.sleep(1.5)
+
         elif "Rainbase: RainDinners" in text:
             current_area[user_id] = "rain"
-            print("[JUDI] 💎 Masuk area RainDinners")
+            if "rain" not in area_triggered[user_id]:
+                area_triggered[user_id].add("rain")
+                print("[JUDI] 💎 Deteksi RainDinners, mengirim /rainDinners...")
+                await asyncio.sleep(1.5)
+                await client.send_message("GrandPiratesBot", "/rainDinners")
+                await asyncio.sleep(1.5)
 
-        # Cek batas main
+        # Batas klik
         total_play = user_state[user_id].get("total_play", "_")
         if total_play != "_" and click_count[user_id] >= int(total_play):
             print(f"[JUDI] ✅ total_play {total_play} tercapai.")
             return
 
-        # Pastikan ada tombol sebelum klik
         if not msg.buttons:
             return
 
@@ -86,14 +91,12 @@ async def run_judi_10(user_id, client):
         except Exception as e:
             print(f"[✗] Gagal klik tombol: {e}")
 
-    # Daftarkan handler
     client.add_event_handler(handler)
 
     try:
         while running_flags.get(user_id, False):
             await asyncio.sleep(2)
     finally:
-        # Cleanup
         client.remove_event_handler(handler)
         config_task.cancel()
         running_flags.pop(user_id, None)
