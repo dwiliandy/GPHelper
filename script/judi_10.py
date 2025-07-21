@@ -79,17 +79,8 @@ async def run_judi_10(user_id, client):
                 area_triggered[user_id].add("rain")
                 print("[JUDI] 💎 Deteksi RainDinners, mengirim /rainDinners...")
                 await asyncio.sleep(1.5)
-                await client.send_message("GrandPiratesBot", "/rainDinners")
+                await client.send_message("GrandPiratesBot", "/v_rainDinners")
                 await asyncio.sleep(1.5)
-
-        # Jika tombol muncul tapi belum deteksi area
-        if msg.buttons and "rain" not in area_triggered[user_id] and current_area[user_id] is None:
-            print("[JUDI] ⚠️ Tombol muncul tanpa deteksi lokasi. Asumsikan RainDinners.")
-            current_area[user_id] = "rain"
-            area_triggered[user_id].add("rain")
-            await asyncio.sleep(1.5)
-            await client.send_message("GrandPiratesBot", "/rainDinners")
-            await asyncio.sleep(1.5)
 
         # Batas klik
         total_play = user_state[user_id].get("total_play", "_")
@@ -97,11 +88,11 @@ async def run_judi_10(user_id, client):
             print(f"[JUDI] ✅ total_play {total_play} tercapai.")
             return
 
-        # Klik tombol Play (-10💎)
         if not msg.buttons:
             return
 
         try:
+            await asyncio.sleep(1.2)
             await msg.click(1, 0)
             click_count[user_id] += 1
             now = time.time()
