@@ -8,7 +8,6 @@ handlers = {}
 current_area = {}
 area_triggered = {}
 reward_totals = {}
-item_emojis = {}
 
 def init(client):
     pass
@@ -32,7 +31,6 @@ async def run_judi_10(user_id, client, event):
     current_area[user_id] = None
     area_triggered[user_id] = set()
     reward_totals[user_id] = {}
-    item_emojis[user_id] = {}
 
     total_play = await get_total_play_config(client, user_id)
     if total_play is None:
@@ -50,7 +48,7 @@ async def run_judi_10(user_id, client, event):
         msg = msg_event.message
         text = msg_event.raw_text
 
-        # 🎯 Deteksi lokasi
+        # Deteksi lokasi
         if "viparea: casinoking" in text.lower():
             current_area[user_id] = "casino"
             if "casino" not in area_triggered[user_id]:
@@ -69,37 +67,36 @@ async def run_judi_10(user_id, client, event):
                 await client.send_message("GrandPiratesBot", "/v_rainDinners")
                 await asyncio.sleep(1.5)
 
-        # 🎁 Deteksi hadiah
+        # Deteksi hadiah
         hadiah_match = re.search(r"Kamu memenangkan Hadiah(?: Utama)? (.+?) \((\d+)X\)", text)
+        last_reward = None
         if hadiah_match:
-            full_item = hadiah_match.group(1).strip()  # contoh: "Shigure 🗡"
+            item = hadiah_match.group(1).strip()
             multiplier = int(hadiah_match.group(2))
+            reward_totals[user_id][item] = reward_totals[user_id].get(item, 0) + multiplier
+            last_reward = f"{item} x{multiplier}"
 
-            # Pisahkan emoji & nama
-            match = re.match(r"(.+?)\s([^\w\s])$", full_item)
-            if match:
-                item_name = match.group(1).strip()
-                emoji = match.group(2)
-            else:
-                item_name = full_item
-                emoji = ""
-
-            # Simpan dan akumulasi
-            reward_totals[user_id][item_name] = reward_totals[user_id].get(item_name, 0) + multiplier
-            item_emojis[user_id][item_name] = emoji
-            print(f"[✓] Klik #{click_count[user_id]+1} | Hadiah: {item_name} x{multiplier} {emoji}")
-
-        # 🔘 Klik tombol Play (-10)
+        # Klik tombol
         if msg.buttons:
             try:
                 btn_text = msg.buttons[1][0].text
                 if "Play" in btn_text:
-                    if click_count[user_id] < total_play:
-                        await asyncio.sleep(1)
-                        await msg.click(1, 0)
-                        click_count[user_id] += 1
-                        await asyncio.sleep(1)
+                    if click_count[user_id] >= total_play:
+                        print(f"[⛔] Batas total_play ({total_play}) tercapai, tidak klik lagi.")
+                        return
+
+                    await asyncio.sleep(1)
+                    await msg.click(1, 0)
+                    click_count[user_id] += 1
+
+                    if last_reward:
+                        print(f"[✓] Klik #{click_count[user_id]} | Hadiah: {last_reward}")
                     else:
+                        print(f"[✓] Klik #{click_count[user_id]}")
+
+                    await asyncio.sleep(1)
+
+                    if click_count[user_id] >= total_play:
                         print(f"[⛔] Batas total_play ({total_play}) tercapai, tidak klik lagi.")
                         running_flags[user_id] = False
                 else:
@@ -109,12 +106,12 @@ async def run_judi_10(user_id, client, event):
             except Exception as e:
                 print(f"[✗] Gagal klik tombol: {e}")
 
-    # ⏳ Pasang handler
+    # Pasang handler
     event_filter = events.NewMessage(from_users="GrandPiratesBot")
     client.add_event_handler(handler, event_filter)
     handlers[user_id] = (handler, event_filter)
 
-    # 🚀 Kirim /adv
+    # Kirim trigger awal
     await asyncio.sleep(1)
     await client.send_message("GrandPiratesBot", "/adv")
     await asyncio.sleep(1)
@@ -123,18 +120,35 @@ async def run_judi_10(user_id, client, event):
         while running_flags.get(user_id, False):
             await asyncio.sleep(2)
     finally:
-        # 🧹 Cleanup
+        # Bersihkan handler
         if user_id in handlers:
             handler_func, filter_ = handlers.pop(user_id)
             client.remove_event_handler(handler_func, filter_)
         running_flags.pop(user_id, None)
 
-        # 📦 Kirim hasil akhir
+        # Kirim ringkasan hadiah
         if reward_totals.get(user_id):
             summary = f"🎁 Total Hadiah yang Kamu Dapatkan setelah {click_count[user_id]} kali percobaan:\n"
+            total_summary = {}
+            emoji_map = {}
+
             for item, count in reward_totals[user_id].items():
-                emoji = item_emojis[user_id].get(item, "")
-                summary += f"- {item} {emoji}: {count}\n"
+                summary += f"- {item} : {count}\n"
+
+                match = re.match(r"([^\w\s])?\s?(.+?)\s(\d[\d,]*)x", item)
+                if match:
+                    emoji = match.group(1) or ""
+                    item_name = match.group(2).strip()
+                    per_unit = int(match.group(3).replace(",", ""))
+                    total_summary[item_name] = total_summary.get(item_name, 0) + (per_unit * count)
+                    if item_name not in emoji_map:
+                        emoji_map[item_name] = emoji
+
+            summary += "\n===Total===\n"
+            for name, total in total_summary.items():
+                emoji = emoji_map.get(name, "")
+                summary += f"- {emoji} {name} : {total:,}\n"
+
             await event.respond(summary.strip())
 
         print(f"[JUDI] 🛑 Selesai untuk user {user_id}")
