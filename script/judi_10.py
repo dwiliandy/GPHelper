@@ -4,6 +4,8 @@ from telethon import events
 running_flags = {}
 click_count = {}
 handlers = {}
+current_area = {}
+area_triggered = {}
 
 def init(client):
     pass
@@ -24,6 +26,8 @@ async def get_total_play_config(client, user_id):
 async def run_judi_10(user_id, client):
     click_count[user_id] = 0
     running_flags[user_id] = True
+    current_area[user_id] = None
+    area_triggered[user_id] = set()
 
     total_play = await get_total_play_config(client, user_id)
     if total_play is None:
@@ -41,28 +45,50 @@ async def run_judi_10(user_id, client):
         msg = event.message
         text = event.raw_text
 
-        # Jika sudah mencapai batas
+        # Deteksi lokasi (tetap ada)
+        if "viparea: casinoking" in text.lower():
+            current_area[user_id] = "casino"
+            if "casino" not in area_triggered[user_id]:
+                area_triggered[user_id].add("casino")
+                print("[JUDI] 🎲 Deteksi CasinoKing, mengirim /casinoKing...")
+                await asyncio.sleep(1.5)
+                await client.send_message("GrandPiratesBot", "/casinoKing")
+                await asyncio.sleep(1.5)
+
+        elif "alabasta: rainbase" in text.lower():
+            current_area[user_id] = "rain"
+            if "rain" not in area_triggered[user_id]:
+                area_triggered[user_id].add("rain")
+                print("[JUDI] 💎 Deteksi RainDinners, mengirim /v_rainDinners...")
+                await asyncio.sleep(1.5)
+                await client.send_message("GrandPiratesBot", "/v_rainDinners")
+                await asyncio.sleep(1.5)
+
+        # Stop jika sudah cukup klik
         if click_count[user_id] >= total_play:
             print(f"[JUDI] ✅ total_play tercapai: {click_count[user_id]}")
             return
 
-        if ("Rainbase: RainDinners" in text or "VIPArea: CasinoKing" in text) and msg.buttons:
-            try:
-                target_text = msg.buttons[1][0].text
-                if "Play" in target_text:
-                    await asyncio.sleep(1)
-                    await msg.click(1, 0)
-                    click_count[user_id] += 1
-                    print(f"[✓] Klik #{click_count[user_id]}")
-                    await asyncio.sleep(1)
-                else:
-                    print(f"[✗] Tombol (1,0) bukan Play: {target_text}")
-            except IndexError:
-                print("[✗] Tombol (1,0) tidak ditemukan.")
-            except Exception as e:
-                print(f"[✗] Gagal klik tombol: {e}")
+        if not msg.buttons:
+            return
 
-    # Pasang handler sebelum /adv
+        # Cari tombol (1,0) dan klik jika mengandung kata Play
+        try:
+            target_text = msg.buttons[1][0].text
+            if "Play" in target_text:
+                await asyncio.sleep(1)
+                await msg.click(1, 0)
+                click_count[user_id] += 1
+                print(f"[✓] Klik #{click_count[user_id]}")
+                await asyncio.sleep(1)
+            else:
+                print(f"[✗] Tombol (1,0) bukan tombol Play: {target_text}")
+        except IndexError:
+            print("[✗] Tombol (1,0) tidak tersedia.")
+        except Exception as e:
+            print(f"[✗] Gagal klik tombol: {e}")
+
+    # Pasang handler sebelum kirim /adv
     event_filter = events.NewMessage(from_users="GrandPiratesBot")
     client.add_event_handler(handler, event_filter)
     handlers[user_id] = (handler, event_filter)
