@@ -153,5 +153,7 @@ async def get_total_play(client):
         if msg.raw_text and "total_play" in msg.raw_text:
             match = re.search(r'total_play\s*=\s*(\d+)', msg.raw_text)
             if match:
+                print(f"[JUDI] 🎲 Ditemukan total_play: {match.group(1)}")
                 return int(match.group(1))
+            
     return None
