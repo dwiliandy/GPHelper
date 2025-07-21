@@ -1,14 +1,16 @@
-import asyncio
-import re
+# scripts/judi10.py
+
 from telethon import events
+import asyncio
+import logging
 
-running_flags = {}
-click_count = {}
-handlers = {}
-reward_totals = {}
+bot_username = 'GrandPiratesBot'
 
-def init(client):
-    pass
+# Tracking per user
+running_flags = {}     # user_id: bool
+user_state = {}        # user_id: { total_play, counter, total_reward, reward_log }
+handler_registered = False
+
 
 async def get_total_play_config(client, user_id):
     async for msg in client.iter_messages('me', limit=10):
@@ -20,110 +22,96 @@ async def get_total_play_config(client, user_id):
                 if 'total_play' in line.lower():
                     parts = line.split('=')
                     if len(parts) == 2:
-                        return int(parts[1].strip())
+                        try:
+                            total_play = int(parts[1].strip())
+                            print(f"[CONFIG] total_play ditemukan: {total_play}")
+                            return total_play
+                        except ValueError:
+                            print("[CONFIG] ❌ Format total_play tidak valid.")
+                            return None
+    print("[CONFIG] ❌ Tidak menemukan konfigurasi total_play di Saved Messages.")
     return None
 
 async def detect_location_and_send_command(client):
     async for msg in client.iter_messages("GrandPiratesBot", limit=10):
+        if not msg.raw_text:
+            continue
+
         text = msg.raw_text.lower()
-        print(text)
+
         if "viparea: casinoking" in text:
-            print("[JUDI] 🎲 Deteksi CasinoKing, mengirim /casinoKing...")
+            print("[JUDI] 🎲 Deteksi lokasi: CasinoKing, mengirim /casinoKing...")
             await asyncio.sleep(1.5)
             await client.send_message("GrandPiratesBot", "/casinoKing")
-            return
+            return True
+
         elif "alabasta: rainbase" in text:
-            print("[JUDI] 💎 Deteksi RainDinners, mengirim /v_rainDinners...")
+            print("[JUDI] 💎 Deteksi lokasi: RainDinners, mengirim /v_rainDinners...")
             await asyncio.sleep(1.5)
             await client.send_message("GrandPiratesBot", "/v_rainDinners")
+            return True
+
+    print("❌ Lokasi tidak dikenali! Silakan pergi ke VIPArea: CasinoKing atau Rainbase di Alabasta dulu.")
+    return False
+
+
+def init(client):
+    global handler_registered
+    if handler_registered:
+        return
+
+    @client.on(events.NewMessage(from_users=bot_username))
+    async def handler(event):
+        user = await event.client.get_me()
+        user_id = user.id
+        if not running_flags.get(user_id, False):
             return
 
+        state = user_state[user_id]
+        text = event.raw_text
 
-async def run_judi_10(user_id, client, event):
-    click_count[user_id] = 0
+        # TODO: logika deteksi pesan hadiah
+        # TODO: logika klik tombol Play jika ada
+
+    handler_registered = True
+
+
+async def run_judi_10(user_id, client, event=None):
     running_flags[user_id] = True
-    reward_totals[user_id] = {}
 
     total_play = await get_total_play_config(client, user_id)
     if total_play is None:
-        await event.respond("❌ Konfigurasi `total_play` tidak ditemukan.")
+        print("❌ Tidak bisa menjalankan script tanpa konfigurasi total_play.")
+        running_flags[user_id] = False
         return
 
-    print(f"[JUDI] ▶️ total_play: {total_play}")
+    # Kirim /adv untuk dapatkan pesan lokasi
+    await client.send_message(bot_username, "/adv")
+    await asyncio.sleep(2.5)  # Tunggu bot balas lokasi
 
-    # Deteksi lokasi hanya sekali di awal
-    await detect_location_and_send_command(client)
+    # Deteksi lokasi dari pesan /adv
+    location_ready = await detect_location_and_send_command(client)
+    if not location_ready:
+        running_flags[user_id] = False
+        return
 
-    async def handler(msg_event):
-        if not running_flags.get(user_id):
-            return
-        if not hasattr(msg_event, "message"):
-            return
+    user_state[user_id] = {
+        "total_play": total_play,
+        "counter": 0,
+        "total_reward": 0,
+        "reward_log": [],
+    }
 
-        msg = msg_event.message
-        text = msg_event.raw_text
-
-        # 🎁 Deteksi hadiah
-        hadiah_match = re.search(r"Kamu memenangkan Hadiah(?: Utama)? (.+?) \((\d+)X\)", text)
-        if hadiah_match:
-            item_text = hadiah_match.group(1).strip()
-            multiplier = int(hadiah_match.group(2))
-            match_icon = re.search(r"([^\w\s])", item_text)
-            icon = match_icon.group(1) if match_icon else ""
-            item_clean = re.sub(r"[^\w\s]", "", item_text).strip()
-            key = f"{icon} {item_clean}"
-            reward_totals[user_id][key] = reward_totals[user_id].get(key, 0) + multiplier
-            print(f"[✓] Klik #{click_count[user_id]} | Hadiah: {key} x{multiplier}")
-
-        if msg.buttons:
-            for row_idx, row in enumerate(msg.buttons):
-                for col_idx, button in enumerate(row):
-                    if button.text and "Play" in button.text:
-                        if click_count[user_id] >= total_play:
-                            print(f"[⛔] Batas total_play ({total_play}) tercapai, tidak klik lagi.")
-                            running_flags[user_id] = False
-                            return
-                        try:
-                            await asyncio.sleep(1)
-                            await msg.click(row_idx, col_idx)
-                            click_count[user_id] += 1
-                            print(f"[✓] Klik #{click_count[user_id]}")
-                            await asyncio.sleep(1)
-                        except Exception as e:
-                            print(f"[✗] Gagal klik tombol: {e}")
-                        return
-
-    event_filter = events.NewMessage(from_users="GrandPiratesBot")
-    client.add_event_handler(handler, event_filter)
-    handlers[user_id] = (handler, event_filter)
-
-    await asyncio.sleep(1)
-    await client.send_message("GrandPiratesBot", "/adv")
-    await asyncio.sleep(1)
+    print(f"▶️ Memulai script auto Judi 10 untuk user {user_id} sebanyak {total_play}x")
 
     try:
         while running_flags.get(user_id, False):
             await asyncio.sleep(2)
+            if asyncio.current_task().cancelled():
+                break
+    except asyncio.CancelledError:
+        print(f"❌ Script dibatalkan untuk user {user_id}")
+        raise
     finally:
-        if user_id in handlers:
-            handler_func, filter_ = handlers.pop(user_id)
-            client.remove_event_handler(handler_func, filter_)
-        running_flags.pop(user_id, None)
-
-        if reward_totals.get(user_id):
-            summary = f"🎁 Total Hadiah yang Kamu Dapatkan setelah {click_count[user_id]} kali percobaan:\n"
-            detail_totals = {}
-            for item_text, multiplier in reward_totals[user_id].items():
-                summary += f"- {item_text} : {multiplier}\n"
-                match = re.search(r"(\d[\d,]*)x", item_text)
-                if match:
-                    jumlah = int(match.group(1).replace(",", ""))
-                    name = item_text.split()[-1]
-                    detail_totals[name] = detail_totals.get(name, 0) + jumlah * multiplier
-            if detail_totals:
-                summary += "\n=== Total ===\n"
-                for name, total in detail_totals.items():
-                    summary += f"{name}: {total}\n"
-            await event.respond(summary.strip())
-
-        print(f"[JUDI] 🛑 Selesai untuk user {user_id}")
+        running_flags[user_id] = False
+        logging.info(f"✅ Script selesai untuk user {user_id}")
