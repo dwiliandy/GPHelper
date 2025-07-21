@@ -59,9 +59,11 @@ def init(client):
 
 async def run_judi_10(client, event, user_id):
     state = user_state[user_id]
+    print(f"[JUDI] ▶️ Memulai judi untuk user {user_id}")
 
     # Ambil total_play dari Saved Messages
     total_play = await get_total_play(client)
+    print(f"[JUDI] ▶️ total_play: {total_play}")
     if total_play is None:
         await event.respond("❌ Tidak menemukan konfigurasi total_play.")
         running_flags[user_id] = False
