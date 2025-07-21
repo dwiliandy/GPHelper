@@ -3,6 +3,7 @@
 from telethon import events
 import asyncio
 import logging
+import re
 
 bot_username = 'GrandPiratesBot'
 
@@ -31,6 +32,7 @@ async def get_total_play_config(client, user_id):
                             return None
     print("[CONFIG] ❌ Tidak menemukan konfigurasi total_play di Saved Messages.")
     return None
+
 
 async def detect_location_and_send_command(client):
     async for msg in client.iter_messages("GrandPiratesBot", limit=10):
@@ -65,14 +67,46 @@ def init(client):
         user = await event.client.get_me()
         user_id = user.id
 
-        if not running_flags.get(user_id, False):
+        if user_id not in user_state or not running_flags.get(user_id):
             return
 
-        text = event.raw_text
         state = user_state[user_id]
+        text = event.raw_text
 
-        # TODO: logika deteksi pesan hadiah
-        # TODO: logika klik tombol Play jika ada
+        # 🎁 Deteksi hadiah
+        hadiah_match = re.search(r"Kamu memenangkan Hadiah(?: Utama)? (.+?) \((\d+)X\)", text)
+        if hadiah_match:
+            item_text = hadiah_match.group(1).strip()
+            multiplier = int(hadiah_match.group(2))
+
+            # Ekstrak icon dan nama
+            match_icon = re.search(r"([^\w\s])", item_text)
+            icon = match_icon.group(1) if match_icon else ""
+            item_clean = re.sub(r"[^\w\s]", "", item_text).strip()
+            key = f"{icon} {item_clean}"
+
+            state["reward_log"].append((key, multiplier))
+            state["total_reward"] += multiplier
+            print(f"[🎁] Klik ke-{state['counter']} | Hadiah: {key} x{multiplier}")
+
+        # 🔘 Klik tombol "Play"
+        if event.buttons:
+            for row_idx, row in enumerate(event.buttons):
+                for col_idx, button in enumerate(row):
+                    if button.text and "Play" in button.text:
+                        if state["counter"] >= state["total_play"]:
+                            print(f"[⛔] Batas total_play ({state['total_play']}) tercapai.")
+                            running_flags[user_id] = False
+                            return
+                        try:
+                            await asyncio.sleep(1)
+                            await event.click(row_idx, col_idx)
+                            state["counter"] += 1
+                            print(f"[🎰] Klik #{state['counter']}")
+                            await asyncio.sleep(1)
+                        except Exception as e:
+                            print(f"[✗] Gagal klik tombol: {e}")
+                        return
 
     handler_registered = True
 
@@ -86,16 +120,17 @@ async def run_judi_10(user_id, client, event=None):
         running_flags[user_id] = False
         return
 
-    # Kirim /adv untuk dapatkan pesan lokasi
+    # Kirim /adv untuk dapat balasan lokasi
     await client.send_message(bot_username, "/adv")
-    await asyncio.sleep(2.5)  # Tunggu bot balas lokasi
+    await asyncio.sleep(2.5)  # Tunggu respon lokasi
 
-    # Deteksi lokasi dari pesan /adv
+    # Deteksi lokasi dari respon /adv
     location_ready = await detect_location_and_send_command(client)
     if not location_ready:
         running_flags[user_id] = False
         return
 
+    # Siapkan state
     user_state[user_id] = {
         "total_play": total_play,
         "counter": 0,
@@ -103,7 +138,7 @@ async def run_judi_10(user_id, client, event=None):
         "reward_log": [],
     }
 
-    print(f"▶️ Memulai script auto Judi 10 untuk user {user_id} sebanyak {total_play}x")
+    print(f"▶️ Memulai auto Judi 10 untuk user {user_id}, total: {total_play}x")
 
     try:
         while running_flags.get(user_id, False):
