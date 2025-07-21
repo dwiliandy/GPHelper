@@ -59,6 +59,7 @@ async def run_judi_10(user_id, client):
         text = event.raw_text
 
         # Deteksi area & kirim perintah sekali
+        print('text:', text)
         if "VIPArea: CasinoKing" in text:
             current_area[user_id] = "casino"
             if "casino" not in area_triggered[user_id]:
