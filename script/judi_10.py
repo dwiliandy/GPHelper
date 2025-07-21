@@ -1,5 +1,6 @@
 import asyncio
 import time
+from telethon import events
 
 running_flags = {}
 click_count = {}
@@ -7,9 +8,10 @@ last_click_time = {}
 current_area = {}
 user_state = {}
 area_triggered = {}
+handlers = {}
 
 def init(client):
-    pass
+    pass  # Kosongkan, jika diperlukan konsistensi antar script
 
 async def get_total_play_config(client, user_id):
     async for msg in client.iter_messages('me', limit=10):
@@ -91,13 +93,19 @@ async def run_judi_10(user_id, client):
         except Exception as e:
             print(f"[✗] Gagal klik tombol: {e}")
 
-    client.add_event_handler(handler)
+    # ⛑ Hanya pesan dari GrandPiratesBot
+    event_filter = events.NewMessage(from_users="GrandPiratesBot")
+    client.add_event_handler(handler, event_filter)
+    handlers[user_id] = (handler, event_filter)
 
     try:
         while running_flags.get(user_id, False):
             await asyncio.sleep(2)
     finally:
-        client.remove_event_handler(handler)
+        # Cleanup
+        if user_id in handlers:
+            handler_func, filter_ = handlers.pop(user_id)
+            client.remove_event_handler(handler_func, filter_)
         config_task.cancel()
         running_flags.pop(user_id, None)
         print(f"[JUDI] 🛑 Selesai & handler dibersihkan untuk user {user_id}")
