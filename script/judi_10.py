@@ -8,10 +8,10 @@ handlers = {}
 current_area = {}
 area_triggered = {}
 reward_totals = {}
-last_reward = {}
+item_emojis = {}
 
 def init(client):
-    pass  # Kosongkan bila tidak diperlukan
+    pass
 
 async def get_total_play_config(client, user_id):
     async for msg in client.iter_messages('me', limit=10):
@@ -32,7 +32,7 @@ async def run_judi_10(user_id, client, event):
     current_area[user_id] = None
     area_triggered[user_id] = set()
     reward_totals[user_id] = {}
-    last_reward[user_id] = "-"
+    item_emojis[user_id] = {}
 
     total_play = await get_total_play_config(client, user_id)
     if total_play is None:
@@ -69,28 +69,38 @@ async def run_judi_10(user_id, client, event):
                 await client.send_message("GrandPiratesBot", "/v_rainDinners")
                 await asyncio.sleep(1.5)
 
-        # 🎁 Deteksi hadiah (termasuk Hadiah Utama)
+        # 🎁 Deteksi hadiah
         hadiah_match = re.search(r"Kamu memenangkan Hadiah(?: Utama)? (.+?) \((\d+)X\)", text)
         if hadiah_match:
-            item = hadiah_match.group(1).strip()
-            count = int(hadiah_match.group(2))
-            reward_totals[user_id][item] = reward_totals[user_id].get(item, 0) + count
-            last_reward[user_id] = f"{item} x{count}"
+            full_item = hadiah_match.group(1).strip()  # contoh: "Shigure 🗡"
+            multiplier = int(hadiah_match.group(2))
+
+            # Pisahkan emoji & nama
+            match = re.match(r"(.+?)\s([^\w\s])$", full_item)
+            if match:
+                item_name = match.group(1).strip()
+                emoji = match.group(2)
+            else:
+                item_name = full_item
+                emoji = ""
+
+            # Simpan dan akumulasi
+            reward_totals[user_id][item_name] = reward_totals[user_id].get(item_name, 0) + multiplier
+            item_emojis[user_id][item_name] = emoji
+            print(f"[✓] Klik #{click_count[user_id]+1} | Hadiah: {item_name} x{multiplier} {emoji}")
 
         # 🔘 Klik tombol Play (-10)
         if msg.buttons:
             try:
                 btn_text = msg.buttons[1][0].text
                 if "Play" in btn_text:
-                    await asyncio.sleep(1)
-                    await msg.click(1, 0)
-                    click_count[user_id] += 1
-                    hadiah_klik = last_reward.get(user_id, "-")
-                    print(f"[✓] Klik #{click_count[user_id]} | Hadiah: {hadiah_klik}")
-                    await asyncio.sleep(1)
-
-                    if click_count[user_id] >= total_play:
-                        print(f"[JUDI] ✅ total_play tercapai: {click_count[user_id]}")
+                    if click_count[user_id] < total_play:
+                        await asyncio.sleep(1)
+                        await msg.click(1, 0)
+                        click_count[user_id] += 1
+                        await asyncio.sleep(1)
+                    else:
+                        print(f"[⛔] Batas total_play ({total_play}) tercapai, tidak klik lagi.")
                         running_flags[user_id] = False
                 else:
                     print(f"[✗] Tombol (1,0) bukan Play: {btn_text}")
@@ -104,7 +114,7 @@ async def run_judi_10(user_id, client, event):
     client.add_event_handler(handler, event_filter)
     handlers[user_id] = (handler, event_filter)
 
-    # 🚀 Trigger awal
+    # 🚀 Kirim /adv
     await asyncio.sleep(1)
     await client.send_message("GrandPiratesBot", "/adv")
     await asyncio.sleep(1)
@@ -119,11 +129,12 @@ async def run_judi_10(user_id, client, event):
             client.remove_event_handler(handler_func, filter_)
         running_flags.pop(user_id, None)
 
-        # 📦 Kirim hasil
+        # 📦 Kirim hasil akhir
         if reward_totals.get(user_id):
             summary = f"🎁 Total Hadiah yang Kamu Dapatkan setelah {click_count[user_id]} kali percobaan:\n"
             for item, count in reward_totals[user_id].items():
-                summary += f"- {item}: {count}\n"
+                emoji = item_emojis[user_id].get(item, "")
+                summary += f"- {item} {emoji}: {count}\n"
             await event.respond(summary.strip())
 
         print(f"[JUDI] 🛑 Selesai untuk user {user_id}")
