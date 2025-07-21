@@ -56,7 +56,6 @@ async def run_judi_10(user_id, client):
 
         msg = event.message
         text = event.raw_text
-        print('[JUDI] 📥 text:', text.lower())
 
         # Debug tombol
         if msg.buttons:
