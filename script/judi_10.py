@@ -26,6 +26,7 @@ async def get_total_play_config(client, user_id):
 async def detect_location_and_send_command(client):
     async for msg in client.iter_messages("GrandPiratesBot", limit=10):
         text = msg.raw_text.lower()
+        print(text)
         if "viparea: casinoking" in text:
             print("[JUDI] 🎲 Deteksi CasinoKing, mengirim /casinoKing...")
             await asyncio.sleep(1.5)
@@ -36,7 +37,7 @@ async def detect_location_and_send_command(client):
             await asyncio.sleep(1.5)
             await client.send_message("GrandPiratesBot", "/v_rainDinners")
             return
-    print("[JUDI] ⚠️ Lokasi tidak dikenali, lanjut dengan asumsi lokasi sudah benar.")
+
 
 async def run_judi_10(user_id, client, event):
     click_count[user_id] = 0
