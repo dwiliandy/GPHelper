@@ -8,6 +8,7 @@ last_click_time = {}
 current_area = {}
 user_state = {}
 area_triggered = {}
+area_ready = {}
 handlers = {}
 
 def init(client):
@@ -39,6 +40,7 @@ async def run_judi_10(user_id, client):
     current_area[user_id] = None
     user_state[user_id] = {}
     area_triggered[user_id] = set()
+    area_ready[user_id] = False
     running_flags[user_id] = True
 
     total_play = await get_total_play_config(client, user_id)
@@ -72,15 +74,22 @@ async def run_judi_10(user_id, client):
                 await asyncio.sleep(1.5)
                 await client.send_message("GrandPiratesBot", "/casinoKing")
                 await asyncio.sleep(1.5)
+                area_ready[user_id] = True
 
         elif "alabasta: rainbase" in text.lower():
             current_area[user_id] = "rain"
             if "rain" not in area_triggered[user_id]:
                 area_triggered[user_id].add("rain")
-                print("[JUDI] 💎 Deteksi RainDinners, mengirim /rainDinners...")
+                print("[JUDI] 💎 Deteksi RainDinners, mengirim /v_rainDinners...")
                 await asyncio.sleep(1.5)
                 await client.send_message("GrandPiratesBot", "/v_rainDinners")
                 await asyncio.sleep(1.5)
+                area_ready[user_id] = True
+
+        # Jika belum siap (belum kirim perintah ke area), skip klik tombol
+        if not area_ready.get(user_id, False):
+            print("[JUDI] ⏳ Area belum siap, tombol tidak akan diklik.")
+            return
 
         # Batas klik
         total_play = user_state[user_id].get("total_play", "_")
@@ -94,6 +103,7 @@ async def run_judi_10(user_id, client):
         try:
             target_text = msg.buttons[1][0].text  # Baris kedua, kolom pertama
             if "Play" in target_text:
+                await asyncio.sleep(1.2)
                 await msg.click(1, 0)
                 click_count[user_id] += 1
                 now = time.time()
