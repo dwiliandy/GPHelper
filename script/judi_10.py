@@ -1,4 +1,5 @@
 import asyncio
+import re
 from telethon import events
 
 running_flags = {}
@@ -6,9 +7,10 @@ click_count = {}
 handlers = {}
 current_area = {}
 area_triggered = {}
+reward_totals = {}
 
 def init(client):
-    pass
+    pass  # Kosongkan bila tidak diperlukan
 
 async def get_total_play_config(client, user_id):
     async for msg in client.iter_messages('me', limit=10):
@@ -23,29 +25,30 @@ async def get_total_play_config(client, user_id):
                         return int(parts[1].strip())
     return None
 
-async def run_judi_10(user_id, client):
+async def run_judi_10(user_id, client, event):
     click_count[user_id] = 0
     running_flags[user_id] = True
     current_area[user_id] = None
     area_triggered[user_id] = set()
+    reward_totals[user_id] = {}
 
     total_play = await get_total_play_config(client, user_id)
     if total_play is None:
-        print("[CONFIG] ❌ total_play tidak ditemukan.")
+        await event.respond("❌ Konfigurasi `total_play` tidak ditemukan.")
         return
 
     print(f"[JUDI] ▶️ total_play: {total_play}")
 
-    async def handler(event):
+    async def handler(msg_event):
         if not running_flags.get(user_id):
             return
-        if not hasattr(event, "message"):
+        if not hasattr(msg_event, "message"):
             return
 
-        msg = event.message
-        text = event.raw_text
+        msg = msg_event.message
+        text = msg_event.raw_text
 
-        # Deteksi lokasi (tetap ada)
+        # 🎯 Deteksi lokasi
         if "viparea: casinoking" in text.lower():
             current_area[user_id] = "casino"
             if "casino" not in area_triggered[user_id]:
@@ -64,36 +67,41 @@ async def run_judi_10(user_id, client):
                 await client.send_message("GrandPiratesBot", "/v_rainDinners")
                 await asyncio.sleep(1.5)
 
-        # Stop jika sudah cukup klik
-        if click_count[user_id] >= total_play:
-            print(f"[JUDI] ✅ total_play tercapai: {click_count[user_id]}")
-            return
+        # 🎁 Deteksi hadiah
+        hadiah_match = re.search(r"Kamu memenangkan Hadiah (.+?) \((\d+)X\)", text)
+        if hadiah_match:
+            item = hadiah_match.group(1).strip()
+            count = int(hadiah_match.group(2))
+            reward_totals[user_id][item] = reward_totals[user_id].get(item, 0) + count
+            print(f"[REWARD] +{count} {item}")
 
-        if not msg.buttons:
-            return
+        # 🔘 Klik tombol Play (-10)
+        if msg.buttons:
+            try:
+                btn_text = msg.buttons[1][0].text
+                if "Play" in btn_text:
+                    await asyncio.sleep(1)
+                    await msg.click(1, 0)
+                    click_count[user_id] += 1
+                    print(f"[✓] Klik #{click_count[user_id]}")
+                    await asyncio.sleep(1)
 
-        # Cari tombol (1,0) dan klik jika mengandung kata Play
-        try:
-            target_text = msg.buttons[1][0].text
-            if "Play" in target_text:
-                await asyncio.sleep(1)
-                await msg.click(1, 0)
-                click_count[user_id] += 1
-                print(f"[✓] Klik #{click_count[user_id]}")
-                await asyncio.sleep(1)
-            else:
-                print(f"[✗] Tombol (1,0) bukan tombol Play: {target_text}")
-        except IndexError:
-            print("[✗] Tombol (1,0) tidak tersedia.")
-        except Exception as e:
-            print(f"[✗] Gagal klik tombol: {e}")
+                    if click_count[user_id] >= total_play:
+                        print(f"[JUDI] ✅ total_play tercapai: {click_count[user_id]}")
+                        running_flags[user_id] = False  # 🛑 stop handler dan loop
+                else:
+                    print(f"[✗] Tombol (1,0) bukan Play: {btn_text}")
+            except IndexError:
+                print("[✗] Tombol (1,0) tidak tersedia.")
+            except Exception as e:
+                print(f"[✗] Gagal klik tombol: {e}")
 
-    # Pasang handler sebelum kirim /adv
+    # ⏳ Pasang handler
     event_filter = events.NewMessage(from_users="GrandPiratesBot")
     client.add_event_handler(handler, event_filter)
     handlers[user_id] = (handler, event_filter)
 
-    # Kirim /adv awal
+    # 🚀 Trigger awal
     await asyncio.sleep(1)
     await client.send_message("GrandPiratesBot", "/adv")
     await asyncio.sleep(1)
@@ -102,8 +110,17 @@ async def run_judi_10(user_id, client):
         while running_flags.get(user_id, False):
             await asyncio.sleep(2)
     finally:
+        # 🧹 Cleanup
         if user_id in handlers:
             handler_func, filter_ = handlers.pop(user_id)
             client.remove_event_handler(handler_func, filter_)
         running_flags.pop(user_id, None)
+
+        # 📦 Kirim hasil
+        if reward_totals.get(user_id):
+            summary = "🎁 Total Hadiah yang Kamu Dapatkan:\n"
+            for item, count in reward_totals[user_id].items():
+                summary += f"- {item}: {count}\n"
+            await event.respond(summary.strip())
+
         print(f"[JUDI] 🛑 Selesai untuk user {user_id}")

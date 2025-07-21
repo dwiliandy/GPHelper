@@ -332,7 +332,7 @@ total_play = 30
 4. Gunakan perintah /q untuk menghentikan script ini.
 """)
 
-    task = asyncio.create_task(judi_10.run_judi_10(user_id, user_client))
+    task = asyncio.create_task(judi_10.run_judi_10(user_id, user_client, event))
     running_tasks.setdefault(user_id, {})['judi_10'] = task
 
 # ========================
