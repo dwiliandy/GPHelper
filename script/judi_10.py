@@ -11,7 +11,7 @@ area_triggered = {}
 handlers = {}
 
 def init(client):
-    pass  # Bisa diisi kalau butuh inisialisasi global
+    pass  # Kosongkan kalau tidak dibutuhkan
 
 async def get_total_play_config(client, user_id):
     async for msg in client.iter_messages('me', limit=10):
@@ -56,10 +56,16 @@ async def run_judi_10(user_id, client):
 
         msg = event.message
         text = event.raw_text
-        print('[JUDI] 📥 text:', text)
+        print('[JUDI] 📥 text:', text.lower())
 
-        # Deteksi lokasi dan kirim perintah sekali
-        if "VIPArea: CasinoKing" in text:
+        # Debug tombol
+        if msg.buttons:
+            for row in msg.buttons:
+                for btn in row:
+                    print(f"[JUDI] 🔘 Tombol ditemukan: {btn.text}")
+
+        # Deteksi lokasi dari text
+        if "viparea: casinoking" in text.lower():
             current_area[user_id] = "casino"
             if "casino" not in area_triggered[user_id]:
                 area_triggered[user_id].add("casino")
@@ -68,7 +74,7 @@ async def run_judi_10(user_id, client):
                 await client.send_message("GrandPiratesBot", "/casinoKing")
                 await asyncio.sleep(1.5)
 
-        elif "Alabasta: Rainbase" in text:
+        elif "alabasta: rainbase" in text.lower():
             current_area[user_id] = "rain"
             if "rain" not in area_triggered[user_id]:
                 area_triggered[user_id].add("rain")
@@ -77,12 +83,22 @@ async def run_judi_10(user_id, client):
                 await client.send_message("GrandPiratesBot", "/rainDinners")
                 await asyncio.sleep(1.5)
 
+        # Jika tombol muncul tapi belum deteksi area
+        if msg.buttons and "rain" not in area_triggered[user_id] and current_area[user_id] is None:
+            print("[JUDI] ⚠️ Tombol muncul tanpa deteksi lokasi. Asumsikan RainDinners.")
+            current_area[user_id] = "rain"
+            area_triggered[user_id].add("rain")
+            await asyncio.sleep(1.5)
+            await client.send_message("GrandPiratesBot", "/rainDinners")
+            await asyncio.sleep(1.5)
+
         # Batas klik
         total_play = user_state[user_id].get("total_play", "_")
         if total_play != "_" and click_count[user_id] >= int(total_play):
             print(f"[JUDI] ✅ total_play {total_play} tercapai.")
             return
 
+        # Klik tombol Play (-10💎)
         if not msg.buttons:
             return
 
@@ -97,12 +113,12 @@ async def run_judi_10(user_id, client):
         except Exception as e:
             print(f"[✗] Gagal klik tombol: {e}")
 
-    # ✅ Pasang handler lebih dulu sebelum kirim /adv
+    # ✅ Pasang handler sebelum kirim /adv
     event_filter = events.NewMessage(from_users="GrandPiratesBot")
     client.add_event_handler(handler, event_filter)
     handlers[user_id] = (handler, event_filter)
 
-    # 🚀 Trigger awal
+    # 🚀 Kirim /adv setelah pasang handler
     await asyncio.sleep(1.5)
     await client.send_message("GrandPiratesBot", "/adv")
     await asyncio.sleep(1.5)
