@@ -4,7 +4,7 @@ import asyncio
 import logging
 from datetime import datetime
 from telethon.tl.custom import Button
-from script import gp, auto_search, ssf_claim, ytta_GoldenSnail, nb, mb, ev, atk_cc
+from script import gp, auto_search, ssf_claim, ytta_GoldenSnail, nb, mb, ev, atk_cc, judi_10
 from session_manager import get_user_session, get_connected_user_client, add_user, load_users
 
 bot_client = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
@@ -43,6 +43,7 @@ Perintah:
 /nb                 - Auto Attack Naval Battle
 /mb                 - Auto Marine Base
 /cc                 - Auto CC Battle
+/j10                - Auto Play Roullette 10
 /ev                 - Auto Event
 
 
@@ -63,6 +64,9 @@ Perintah:
         ],[
             
             Button.inline("⚔️ CC Battle", b"/cc"),
+            Button.inline("🎰 Roullette 10", b"/roullette_10"),
+            
+        ],[
             Button.inline("Event", b"/ev")
         ],
         [
@@ -104,6 +108,7 @@ async def handle_inline_button(event):
         "/mb": run_mb,
         '/ev': run_ev,
         "/cc": run_cc,
+        "/roullette_10": run_judi_10,  # ✅ ini penting
         "/q": quit_all,
         "/cek_session": cek_session
     }
@@ -299,6 +304,36 @@ async def run_ev(event):
     await event.respond("🗒 Menjalankan Event...")
     task = asyncio.create_task(ev.run_ev(user_client))
     running_tasks.setdefault(user_id, {})['ev'] = task
+
+@bot_client.on(events.NewMessage(pattern="/judi_10"))
+async def run_judi_10(event):
+    user_id = event.sender_id
+    user_client = await get_connected_user_client(user_id, event)
+    if not user_client:
+        await event.respond("❌ Gagal menyambung ulang ke akun kamu.")
+        return
+
+    judi_10.init(user_client)
+    user_tasks = running_tasks.get(user_id, {})
+    if 'judi_10' in user_tasks and not user_tasks['judi_10'].done():
+        await event.respond("⚠️ Script Judi sudah berjalan.")
+        return
+
+    await event.respond("🎰 Menjalankan Script Judi...")
+    await event.respond("""📘 Petunjuk Penggunaan:
+
+1. Pastikan kamu sudah di Rainbase atau CasinoKing.
+2. Simpan konfigurasi di Saved Messages seperti:
+
+===GRANDPIRATES CONFIGURATION===
+total_play = 30
+
+3. Script akan klik otomatis tombol Play (-10).
+4. Gunakan perintah /q untuk menghentikan script ini.
+""")
+
+    task = asyncio.create_task(judi_10.run_judi_10(user_id, user_client))
+    running_tasks.setdefault(user_id, {})['judi_10'] = task
 
 # ========================
 #  /q — Matikan semua script
