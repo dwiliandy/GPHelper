@@ -3,4 +3,4 @@
 *sessions_map.json
 .env
 load_env.py
-bot_session
+bot_session.session
