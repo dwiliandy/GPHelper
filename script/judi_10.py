@@ -64,11 +64,12 @@ def init(client):
     async def handler(event):
         user = await event.client.get_me()
         user_id = user.id
+
         if not running_flags.get(user_id, False):
             return
 
-        state = user_state[user_id]
         text = event.raw_text
+        state = user_state[user_id]
 
         # TODO: logika deteksi pesan hadiah
         # TODO: logika klik tombol Play jika ada
