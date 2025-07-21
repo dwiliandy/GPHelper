@@ -8,6 +8,7 @@ handlers = {}
 current_area = {}
 area_triggered = {}
 reward_totals = {}
+last_reward = {}
 
 def init(client):
     pass  # Kosongkan bila tidak diperlukan
@@ -31,6 +32,7 @@ async def run_judi_10(user_id, client, event):
     current_area[user_id] = None
     area_triggered[user_id] = set()
     reward_totals[user_id] = {}
+    last_reward[user_id] = "-"
 
     total_play = await get_total_play_config(client, user_id)
     if total_play is None:
@@ -67,13 +69,13 @@ async def run_judi_10(user_id, client, event):
                 await client.send_message("GrandPiratesBot", "/v_rainDinners")
                 await asyncio.sleep(1.5)
 
-        # 🎁 Deteksi hadiah
-        hadiah_match = re.search(r"Kamu memenangkan Hadiah (.+?) \((\d+)X\)", text)
+        # 🎁 Deteksi hadiah (termasuk Hadiah Utama)
+        hadiah_match = re.search(r"Kamu memenangkan Hadiah(?: Utama)? (.+?) \((\d+)X\)", text)
         if hadiah_match:
             item = hadiah_match.group(1).strip()
             count = int(hadiah_match.group(2))
             reward_totals[user_id][item] = reward_totals[user_id].get(item, 0) + count
-            print(f"[REWARD] +{count} {item}")
+            last_reward[user_id] = f"{item} x{count}"
 
         # 🔘 Klik tombol Play (-10)
         if msg.buttons:
@@ -83,12 +85,13 @@ async def run_judi_10(user_id, client, event):
                     await asyncio.sleep(1)
                     await msg.click(1, 0)
                     click_count[user_id] += 1
-                    print(f"[✓] Klik #{click_count[user_id]}")
+                    hadiah_klik = last_reward.get(user_id, "-")
+                    print(f"[✓] Klik #{click_count[user_id]} | Hadiah: {hadiah_klik}")
                     await asyncio.sleep(1)
 
                     if click_count[user_id] >= total_play:
                         print(f"[JUDI] ✅ total_play tercapai: {click_count[user_id]}")
-                        running_flags[user_id] = False  # 🛑 stop handler dan loop
+                        running_flags[user_id] = False
                 else:
                     print(f"[✗] Tombol (1,0) bukan Play: {btn_text}")
             except IndexError:
@@ -118,7 +121,7 @@ async def run_judi_10(user_id, client, event):
 
         # 📦 Kirim hasil
         if reward_totals.get(user_id):
-            summary = "🎁 Total Hadiah yang Kamu Dapatkan:\n"
+            summary = f"🎁 Total Hadiah yang Kamu Dapatkan setelah {click_count[user_id]} kali percobaan:\n"
             for item, count in reward_totals[user_id].items():
                 summary += f"- {item}: {count}\n"
             await event.respond(summary.strip())
