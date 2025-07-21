@@ -45,6 +45,10 @@ async def run_judi_10(user_id, client):
     user_state[user_id]['total_play'] = total_play or "_"
     print(f"[JUDI] total_play awal: {user_state[user_id]['total_play']}")
 
+    await asyncio.sleep(1.5)
+    await client.send_message("GrandPiratesBot", "/adv")
+    await asyncio.sleep(1.5)
+
     config_task = asyncio.create_task(update_config_periodically(client, user_id))
 
     async def handler(event):
@@ -64,7 +68,7 @@ async def run_judi_10(user_id, client):
                 await client.send_message("GrandPiratesBot", "/casinoKing")
                 await asyncio.sleep(1.5)
 
-        elif "Rainbase: RainDinners" in text:
+        elif "Alabasta: Rainbase" in text:
             current_area[user_id] = "rain"
             if "rain" not in area_triggered[user_id]:
                 area_triggered[user_id].add("rain")
