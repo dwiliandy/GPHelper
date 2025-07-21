@@ -92,14 +92,19 @@ async def run_judi_10(user_id, client):
             return
 
         try:
-            await asyncio.sleep(1.2)
-            await msg.click(1, 0)
-            click_count[user_id] += 1
-            now = time.time()
-            elapsed = now - last_click_time[user_id]
-            last_click_time[user_id] = now
-            print(f"[✓] Klik #{click_count[user_id]} | Jeda {elapsed:.2f}s")
-            await asyncio.sleep(1)
+            target_text = msg.buttons[1][0].text  # Baris kedua, kolom pertama
+            if "Play" in target_text:
+                await msg.click(1, 0)
+                click_count[user_id] += 1
+                now = time.time()
+                elapsed = now - last_click_time[user_id]
+                last_click_time[user_id] = now
+                print(f"[✓] Klik #{click_count[user_id]} | Jeda {elapsed:.2f}s")
+                await asyncio.sleep(1)
+            else:
+                print(f"[✗] Tombol (1,0) bukan tombol Play: {target_text}")
+        except IndexError:
+            print("[✗] Tombol (1,0) tidak tersedia.")
         except Exception as e:
             print(f"[✗] Gagal klik tombol: {e}")
 
