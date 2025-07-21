@@ -11,7 +11,7 @@ area_triggered = {}
 handlers = {}
 
 def init(client):
-    pass  # Kosongkan, jika diperlukan konsistensi antar script
+    pass  # Bisa diisi kalau butuh inisialisasi global
 
 async def get_total_play_config(client, user_id):
     async for msg in client.iter_messages('me', limit=10):
@@ -45,21 +45,20 @@ async def run_judi_10(user_id, client):
     user_state[user_id]['total_play'] = total_play or "_"
     print(f"[JUDI] total_play awal: {user_state[user_id]['total_play']}")
 
-    await asyncio.sleep(1.5)
-    await client.send_message("GrandPiratesBot", "/adv")
-    await asyncio.sleep(1.5)
-
-    config_task = asyncio.create_task(update_config_periodically(client, user_id))
-
+    # Handler event pesan dari GrandPiratesBot
     async def handler(event):
         if not running_flags.get(user_id):
             return
 
+        if not hasattr(event, "message"):
+            print("[JUDI] ⛔ Event tanpa message, dilewati.")
+            return
+
         msg = event.message
         text = event.raw_text
+        print('[JUDI] 📥 text:', text)
 
-        # Deteksi area & kirim perintah sekali
-        print('text:', text)
+        # Deteksi lokasi dan kirim perintah sekali
         if "VIPArea: CasinoKing" in text:
             current_area[user_id] = "casino"
             if "casino" not in area_triggered[user_id]:
@@ -98,16 +97,24 @@ async def run_judi_10(user_id, client):
         except Exception as e:
             print(f"[✗] Gagal klik tombol: {e}")
 
-    # ⛑ Hanya pesan dari GrandPiratesBot
+    # ✅ Pasang handler lebih dulu sebelum kirim /adv
     event_filter = events.NewMessage(from_users="GrandPiratesBot")
     client.add_event_handler(handler, event_filter)
     handlers[user_id] = (handler, event_filter)
+
+    # 🚀 Trigger awal
+    await asyncio.sleep(1.5)
+    await client.send_message("GrandPiratesBot", "/adv")
+    await asyncio.sleep(1.5)
+
+    # ⏳ Update config jalan terus
+    config_task = asyncio.create_task(update_config_periodically(client, user_id))
 
     try:
         while running_flags.get(user_id, False):
             await asyncio.sleep(2)
     finally:
-        # Cleanup
+        # 🧹 Bersihkan handler dan task
         if user_id in handlers:
             handler_func, filter_ = handlers.pop(user_id)
             client.remove_event_handler(handler_func, filter_)
