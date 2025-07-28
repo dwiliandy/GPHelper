@@ -68,7 +68,6 @@ GPHelper/
 │   ├── naval.py
 │   ├── mb.py
 │   └── ...
-├── utils/                # Helper function umum
 ├── sessions/             # File session Telethon
 └── .env                  # Konfigurasi kredensial bot
 ```
